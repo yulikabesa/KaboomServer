@@ -6,11 +6,12 @@ import { gameService } from "../services/gameService";
 export const gameSocket = (io: Server, socket: Socket) => {
 
     // host creates game session
-    socket.on("create-game-sessiom", async ({ quizId }) => {
+    socket.on("create-game-session", async ({ quizId }) => {
         const game = await gameService.createGameSession(
             quizId,
             socket.id
         );
+
         socket.join(game.pin); // זה יוצר room  
         socket.emit("game-created", {
             pin: game.pin
@@ -73,11 +74,13 @@ export const gameSocket = (io: Server, socket: Socket) => {
             return
         }
         const question = await gameService.nextQuestion(pin);
-        io.to(pin).emit("question", {
-            question: question.question,
-            answers: question.answers,
-            timeLimit: question.timeLimit
-        });
+        if (question) {
+            io.to(pin).emit("question", {
+                question: question.question,
+                answers: question.answers,
+                timeLimit: question.timeLimit
+            });
+        }
     });
 
 }

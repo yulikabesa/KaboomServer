@@ -1,95 +1,125 @@
-// לוגיקה (ניקוד, leaderboard וכו') todo
-
 import { redisClient } from "../db/redis";
+import { redisKeys } from "../db/redisKeys";
+// import { envServiceClient } from "./envServiceClient";
 import Quiz from "../models/quiz";
+
+const generatePin = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+const getQuestion = async (pin: string, index: number) => {
+  const data = await redisClient.hGetAll(redisKeys.question(pin, index));
+
+  return {
+    question: data.question,
+    answers: JSON.parse(data.answers),
+    timeLimit: Number(data.timeLimit),
+  };
+};
+
 export const gameService = {
-
-    async createGameSession(quizId: string, hostId: string) {
-        const quiz = await Quiz.findById(quizId);
-        if (!quiz) {
-            throw new Error("Quiz not found")
-        };
-
-        const pin = Math.floor(100000 + Math.random() * 900000).toString();
-        const game = {
-            quizId: quiz._id, // the id of the quiz in db
-            hostId,
-            status: "waiting",
-            currentQuestion: -1,
-            questions: quiz.questions,
-            players: {}
-        };
-        await redisClient.set(
-            `game:${pin}`,
-            JSON.stringify(game)
-        );
-        return { pin };
-    },
-
-    async addPlayer(pin: string, nickname: string, socketId: string) {
-        const key = `game:${pin}`;
-        const game = await redisClient.get(key);
-        if (!game) {
-            throw new Error("Game not found");
-        }
-        const parsedGame = JSON.parse(game);
-        parsedGame.players[socketId] = {
-            nickname,
-            score: 0
-        };
-
-        await redisClient.set(key, JSON.stringify(parsedGame));
-
-        return {
-            id: socketId,
-            nickname
-        };
-    },
-
-    async startGame(pin: string) {
-        const game = await redisClient.get(`game:${pin}`);
-        if (!game) throw new Error("Game not found");
-        const parsedGame = JSON.parse(game);
-        parsedGame.status = "playing";
-        parsedGame.currentQuestion = 0;
-        await redisClient.set(`game:${pin}`, JSON.stringify(parsedGame));
-        return parsedGame.currentQuestion;
-    },
-
-    async submitAnswer(pin: string, socketId: string, answer: string) {
-        const key = `game:${pin}`;
-        const game = await redisClient.get(key);
-        if (!game) return;
-        const parsedGame = JSON.parse(game);
-        const currentQuestion =
-            parsedGame.questions[parsedGame.currentQuestion];
-        const player = parsedGame.players[socketId];
-        if (!player) return;
-        // answer is the index the player clicked
-        if (answer === currentQuestion.correctAnswerIndex) {
-            player.score += 100; // to change later based on time it took to answer
-        }
-
-        await redisClient.set(key, JSON.stringify(parsedGame))
-        return player.score;
-    },
-
-    async nextQuestion(pin: string) {
-        const key = `game:${pin}`;
-        const game = await redisClient.get(key);
-        if (!game) throw new Error("Game not found");
-        const parsedGame = JSON.parse(game);
-        parsedGame.currentQuestion++;
-        const question =
-            parsedGame.questions[parsedGame.currentQuestion];
-        await redisClient.set(key, JSON.stringify(parsedGame));
-        return question;
-    },
-
-    async isHost(pin: string, socketId: string) {
-        const game = await redisClient.get(`game:${pin}`);
-        if (!game) return false;
-        const parsed = JSON.parse(game);
-        return parsed.hostId === socketId;
+  async createGameSession(quizId: string, hostSocketId: string) {
+    // const quiz = await envServiceClient.fetchQuiz(quizId);
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) {
+      throw new Error("Quiz not found");
     }
-}
+
+    const pin = generatePin();
+
+    await redisClient.hSet(redisKeys.meta(pin), {
+      quizId,
+      host: hostSocketId,
+      state: "lobby",
+      currentQuestion: 0,
+      questionCount: quiz.questions.length,
+    });
+
+    for (let i = 0; i < quiz.questions.length; i++) {
+      const q = quiz.questions[i];
+
+      await redisClient.hSet(redisKeys.question(pin, i), {
+        question: q.question,
+        answers: JSON.stringify(q.answers),
+        timeLimit: q.timeLimit || 10,
+      });
+    }
+
+    return { pin };
+  },
+
+  async isHost(pin: string, socketId: string) {
+    const host = await redisClient.hGet(redisKeys.meta(pin), "host");
+
+    return host === socketId;
+  },
+
+  async addPlayer(pin: string, nickname: string, socketId: string) {
+    const player = {
+      id: socketId,
+      nickname,
+    };
+
+    await redisClient.hSet(redisKeys.players(pin), socketId, nickname);
+
+    await redisClient.zAdd(redisKeys.leaderboard(pin), {
+      score: 0,
+      value: socketId,
+    });
+
+    return player;
+  },
+
+  async startGame(pin: string) {
+    await redisClient.hSet(redisKeys.meta(pin), "state", "playing");
+
+    const question = await getQuestion(pin, 0);
+
+    return question;
+  },
+
+  async submitAnswer(pin: string, playerId: string, answerIndex: number) {
+    const qIdx = Number(
+      await redisClient.hGet(redisKeys.meta(pin), "currentQuestion"),
+    );
+
+    await redisClient.hSet(redisKeys.answers(pin, qIdx), playerId, answerIndex);
+
+    const question = await getQuestion(pin, qIdx);
+
+    const correctAnswers = question.answers
+      .map((a: any, i: number) => (a.isCorrect ? i : null))
+      .filter((v: any) => v !== null);
+
+    let score = 0;
+
+    if (correctAnswers.includes(answerIndex)) {
+      score = 1000;
+
+      await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, playerId);
+    }
+
+    return score;
+  },
+
+  async nextQuestion(pin: string) {
+    let current = Number(
+      await redisClient.hGet(redisKeys.meta(pin), "currentQuestion"),
+    );
+
+    current += 1;
+
+    const total = Number(
+      await redisClient.hgGet(redisKeys.meta(pin), "questionCount"),
+    );
+
+    if (current >= total) {
+      await redisClient.hSet(redisKeys.meta(pin), "state", "finished");
+
+      return null;
+    }
+
+    await redisClient.hSet(redisKeys.meta(pin), "currentQuestion", current);
+
+    return getQuestion(pin, current);
+  },
+};
