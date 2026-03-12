@@ -6,13 +6,11 @@ export const redisClient = createClient({
 
 export const connectRedis = async () => {
     try {
-
         redisClient.on("error", (err) => {
             console.error("Redis error:", err);
         })
 
         await redisClient.connect();
-
         console.log("Redis connected");
 
     } catch (error) {

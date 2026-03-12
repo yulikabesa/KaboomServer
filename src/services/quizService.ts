@@ -4,10 +4,9 @@ import type { IQuiz } from "../models/quiz.ts";
 export class QuizService {
   // Create new quiz
   static async createQuiz(body: IQuiz): Promise<IQuiz> {
-    const user = new Quiz(body);
-
-    await user.save();
-    return user;
+    const quiz = new Quiz(body);
+    await quiz.save();
+    return quiz;
   }
 
   // GET quiz by id

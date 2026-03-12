@@ -23,11 +23,13 @@ export const gameSocket = (io: Server, socket: Socket) => {
     socket.on("join-game", async ({ pin, nickname }) => {
         const isHost = await gameService.isHost(pin, socket.id);
         if (isHost) return;
+
         const player = await gameService.addPlayer(
             pin,
             nickname,
             socket.id
         );
+
         socket.join(pin);
         io.to(pin).emit("player-joined", player);
     });
@@ -40,6 +42,7 @@ export const gameSocket = (io: Server, socket: Socket) => {
             socket.emit("error", "Only host can start the game");
             return;
         }
+
         const question = await gameService.startGame(pin);
         io.to(pin).emit("game-started", {
             question
@@ -50,15 +53,18 @@ export const gameSocket = (io: Server, socket: Socket) => {
     // player answers a question
     socket.on("submit-answer", async ({ pin, answer }) => {
         const isHost = await gameService.isHost(pin, socket.id);
+
         if (isHost) {
             socket.emit("error", "Host cannot answer");
             return;
         }
+
         const score = await gameService.submitAnswer(
             pin,
             socket.id,
             answer
         );
+
         io.to(pin).emit("score-update", {
             playerId: socket.id,
             score
@@ -73,6 +79,7 @@ export const gameSocket = (io: Server, socket: Socket) => {
             socket.emit("error", "Only host can change question");
             return
         }
+        
         const question = await gameService.nextQuestion(pin);
         if (question) {
             io.to(pin).emit("question", {
@@ -82,5 +89,4 @@ export const gameSocket = (io: Server, socket: Socket) => {
             });
         }
     });
-
 }

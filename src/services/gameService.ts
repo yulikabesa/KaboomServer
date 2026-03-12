@@ -1,13 +1,23 @@
-import { redisClient } from "../db/redis";
-import { redisKeys } from "../db/redisKeys";
+import { redisClient } from "../db/redis/redis";
+import { redisKeys } from "../db/redis/redisKeys";
+import { QuizService } from "./quizService";
 // import { envServiceClient } from "./envServiceClient";
-import Quiz from "../models/quiz";
+
+const formatQuestionForClient = (question: any) => ({
+  question: question.question,
+  timeLimit: question.timeLimit,
+  answers: question.answers,
+});
 
 const generatePin = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 const getQuestion = async (pin: string, index: number) => {
   const data = await redisClient.hGetAll(redisKeys.question(pin, index));
+
+  if (!data || Object.keys(data).length === 0) {
+    throw new Error("Question not found");
+  }
 
   return {
     question: data.question,
@@ -19,7 +29,8 @@ const getQuestion = async (pin: string, index: number) => {
 export const gameService = {
   async createGameSession(quizId: string, hostSocketId: string) {
     // const quiz = await envServiceClient.fetchQuiz(quizId);
-    const quiz = await Quiz.findById(quizId);
+
+    const quiz = await QuizService.getQuizById(quizId);
     if (!quiz) {
       throw new Error("Quiz not found");
     }
@@ -74,7 +85,7 @@ export const gameService = {
 
     const question = await getQuestion(pin, 0);
 
-    return question;
+    return formatQuestionForClient(question);
   },
 
   async submitAnswer(pin: string, playerId: string, answerIndex: number) {
@@ -82,13 +93,25 @@ export const gameService = {
       await redisClient.hGet(redisKeys.meta(pin), "currentQuestion"),
     );
 
+    const hasAnswered = await redisClient.hExists(
+      redisKeys.answers(pin, qIdx),
+      playerId,
+    );
+    if (hasAnswered) return;
+
     await redisClient.hSet(redisKeys.answers(pin, qIdx), playerId, answerIndex);
 
     const question = await getQuestion(pin, qIdx);
 
-    const correctAnswers = question.answers
-      .map((a: any, i: number) => (a.isCorrect ? i : null))
-      .filter((v: any) => v !== null);
+    await redisClient.hIncrBy(
+      redisKeys.answerCounts(pin, qIdx),
+      answerIndex.toString(),
+      1,
+    );
+
+    const correctAnswers = question.answers;
+    //   .map((a: any, i: number) => (a.isCorrect ? i : null))
+    //   .filter((v: any) => v !== null);
 
     let score = 0;
 
@@ -102,24 +125,43 @@ export const gameService = {
   },
 
   async nextQuestion(pin: string) {
-    let current = Number(
-      await redisClient.hGet(redisKeys.meta(pin), "currentQuestion"),
-    );
+    const meta = await redisClient.hGetAll(redisKeys.meta(pin));
+    const current = Number(meta.currentQuestion) + 1;
 
-    current += 1;
-
-    const total = Number(
-      await redisClient.hgGet(redisKeys.meta(pin), "questionCount"),
-    );
+    const total = Number(meta.questionCount);
 
     if (current >= total) {
       await redisClient.hSet(redisKeys.meta(pin), "state", "finished");
-
       return null;
     }
 
     await redisClient.hSet(redisKeys.meta(pin), "currentQuestion", current);
 
-    return getQuestion(pin, current);
+    const question = await getQuestion(pin, current);
+    return formatQuestionForClient(question);
+  },
+
+  async getLeaderboard(pin: string) {
+    const data = await redisClient.zRangeWithScores(
+      redisKeys.leaderboard(pin),
+      0,
+      -1,
+      { REV: true },
+    );
+
+    const players = await redisClient.hGetAll(redisKeys.players(pin));
+    
+    return data.map((p) => ({
+      playerId: p.value,
+      nickname: players[p.value],
+      score: p.score,
+    }));
+  },
+
+  async getAnswerDistribution(pin: string) {
+    const qIdx = Number(await redisClient.hGet(redisKeys.meta(pin), "currentQuestion"));
+
+    const counts = await redisClient.hGetAll(redisKeys.answerCounts(pin, qIdx));
+    return counts;
   },
 };

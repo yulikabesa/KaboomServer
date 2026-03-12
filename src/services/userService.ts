@@ -5,7 +5,6 @@ export class UserService {
   // Create new user
   static async createUser(body: IUser): Promise<IUser> {
     const user = new User(body);
-
     await user.save();
     return user;
   }
