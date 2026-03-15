@@ -3,7 +3,7 @@ import { Schema, model, Document } from "mongoose";
 export interface IQuestion {
     question: string;
     answers: string[];
-    correctAnswerIndexArray: number[];
+    correctIndexes: number[];
     timeLimit: number;
 }
 
@@ -22,7 +22,7 @@ const QuestionSchema = new Schema<IQuestion>({
         type: [String],
         required: true
     },
-    correctAnswerIndexArray: {
+    correctIndexes: {
         type: [Number],
         required: true
     },
