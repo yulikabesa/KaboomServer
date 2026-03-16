@@ -14,7 +14,7 @@ const formatQuestionForClient = (question: {
 });
 
 const generatePin = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+  Math.floor(1000000 + Math.random() * 9000000).toString();
 
 const getQuestion = async (pin: string, index: number) => {
   const data = await redisClient.hGetAll(redisKeys.question(pin, index));
