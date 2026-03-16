@@ -165,6 +165,10 @@ export const gameService = {
     };
   },
 
+  async getPlayers(pin: string) {
+    return await redisClient.hGetAll(redisKeys.players(pin));
+  },
+
   async getLeaderboard(pin: string) {
     const data = await redisClient.zRangeWithScores(
       redisKeys.leaderboard(pin),
