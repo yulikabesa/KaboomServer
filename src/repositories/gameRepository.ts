@@ -26,15 +26,7 @@ export const gameRepository = {
   },
 
   async getMeta(pin: string) {
-    const meta = await redisClient.hGetAll(redisKeys.meta(pin));
-
-    // Check if the returned object is empty
-    if (Object.keys(meta).length === 0) {
-      return null;
-    }
-
-    return meta;
-    // return await redisClient.hGetAll(redisKeys.meta(pin));
+    return await redisClient.hGetAll(redisKeys.meta(pin));
   },
 
   async getHost(pin: string) {
