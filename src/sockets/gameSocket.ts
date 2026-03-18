@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { gameService } from "../services/gameService";
+import { gameRepository } from "../repositories/gameRepository";
 
 const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
@@ -70,6 +71,17 @@ const handlers = {
     const results = await gameService.endQuestion(payload.pin);
     io.to(payload.pin).emit("question-results", results);
   }),
+
+  "validate-pin": async (payload: any, socket: Socket) => {
+    const meta = await gameRepository.getMeta(payload.pin);
+    if (!meta) {
+      socket.emit("error", "Invalid pin");
+    } else if (meta.state !== "lobby") {
+      socket.emit("error", "Game in progress")
+    } else {
+      socket.emit("pin-valid");
+    }
+  },
 };
 
 type HandlerKeys = keyof typeof handlers;
