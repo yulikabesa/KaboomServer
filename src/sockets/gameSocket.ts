@@ -41,7 +41,7 @@ const handlers = {
       socket.id,
       payload.answer,
     );
-    socket.emit("answer-received", { score });
+    socket.emit("answer-received");
 
     const progress = await gameService.getAnswerProgress(payload.pin);
     const host = await gameService.getHost(payload.pin);
@@ -75,9 +75,9 @@ const handlers = {
   "validate-pin": async (payload: any, socket: Socket) => {
     const meta = await gameRepository.getMeta(payload.pin);
     if (!meta) {
-      socket.emit("error", "Invalid pin");
+      socket.emit("pin-error", "Invalid pin");
     } else if (meta.state !== "lobby") {
-      socket.emit("error", "Game in progress")
+      socket.emit("pin-error", "Game in progress");
     } else {
       socket.emit("pin-valid");
     }

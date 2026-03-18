@@ -2,7 +2,12 @@ import { redisClient } from "../db/redis/redis";
 import { redisKeys } from "../db/redis/redisKeys";
 
 export const gameRepository = {
-  async createMeta(pin: string, quizId: string, host: string, questionCount: number) {
+  async createMeta(
+    pin: string,
+    quizId: string,
+    host: string,
+    questionCount: number,
+  ) {
     await redisClient.hSet(redisKeys.meta(pin), {
       quizId,
       host,
@@ -21,7 +26,15 @@ export const gameRepository = {
   },
 
   async getMeta(pin: string) {
-    return await redisClient.hGetAll(redisKeys.meta(pin));
+    const meta = await redisClient.hGetAll(redisKeys.meta(pin));
+
+    // Check if the returned object is empty
+    if (Object.keys(meta).length === 0) {
+      return null;
+    }
+
+    return meta;
+    // return await redisClient.hGetAll(redisKeys.meta(pin));
   },
 
   async getHost(pin: string) {
@@ -51,7 +64,7 @@ export const gameRepository = {
       redisKeys.leaderboard(pin),
       0,
       -1,
-      { REV: true }
+      { REV: true },
     );
   },
 
@@ -75,11 +88,16 @@ export const gameRepository = {
     };
   },
 
-  async submitAnswer(pin: string, qIdx: number, playerId: string, answer: number) {
+  async submitAnswer(
+    pin: string,
+    qIdx: number,
+    playerId: string,
+    answer: number,
+  ) {
     return await redisClient.hSetNX(
       redisKeys.answers(pin, qIdx),
       playerId,
-      answer.toString()
+      answer.toString(),
     );
   },
 
