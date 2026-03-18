@@ -1,128 +1,90 @@
-// כל אירועי המשחק
-// todo
 import { Server, Socket } from "socket.io";
 import { gameService } from "../services/gameService";
 
-export const gameSocket = (io: Server, socket: Socket) => {
-  // host creates game session
-  socket.on("create-game-session", async ({ quizId }) => {
-    try {
-      const game = await gameService.createGameSession(quizId, socket.id);
-
-      socket.join(game.pin); // זה יוצר room
-      socket.emit("game-created", {
-        pin: game.pin,
-      });
-    } catch (error) {
-      socket.emit("error", "Failed to create game session");
+const hostOnly =
+  (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
+  async (payload: any, socket: Socket, io: Server) => {
+    const isHost = await gameService.isHost(payload.pin, socket.id);
+    if (!isHost) {
+      socket.emit("error", "Only host can perform this action");
+      return;
     }
-  });
+    await handler(payload, socket, io);
+  };
 
-  // players join
-  socket.on("join-game", async ({ pin, nickname }) => {
-    try {
-      const isHost = await gameService.isHost(pin, socket.id);
-      if (isHost) return;
+const handlers = {
+  "create-game-session": async (payload: any, socket: Socket, io: Server) => {
+    const game = await gameService.createGameSession(payload.quizId, socket.id);
+    socket.join(game.pin);
+    socket.emit("game-created", { pin: game.pin });
+  },
 
-      const player = await gameService.addPlayer(pin, nickname, socket.id);
-      socket.join(pin);
-      io.to(pin).emit("player-joined", player);
-    } catch (error) {
-      socket.emit("error", "Failed to join game");
+  "join-game": async (payload: any, socket: Socket, io: Server) => {
+    const player = await gameService.addPlayer(
+      payload.pin,
+      socket.id,
+      payload.nickname,
+    );
+    socket.join(payload.pin);
+    io.to(payload.pin).emit("player-joined", player);
+  },
+
+  "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
+    const question = await gameService.startGame(payload.pin);
+    io.to(payload.pin).emit("game-started", { question });
+  }),
+
+  "submit-answer": async (payload: any, socket: Socket, io: Server) => {
+    const score = await gameService.submitAnswer(
+      payload.pin,
+      socket.id,
+      payload.answer,
+    );
+    socket.emit("answer-received", { score });
+
+    const progress = await gameService.getAnswerProgress(payload.pin);
+    const host = await gameService.getHost(payload.pin);
+    io.to(host!).emit("answer-progress", progress.answered);
+
+    if (progress.answered === progress.totalPlayers) {
+      const results = await gameService.endQuestion(payload.pin);
+      io.to(payload.pin).emit("question-results", results);
     }
-  });
+  },
 
-  // host starts the game
-  socket.on("start-game", async ({ pin }) => {
-    try {
-      const isHost = await gameService.isHost(pin, socket.id);
-      if (!isHost) {
-        socket.emit("error", "Only host can start the game");
-        return;
-      }
-
-      const question = await gameService.startGame(pin);
-      io.to(pin).emit("game-started", {
-        question,
-      });
-    } catch (error) {
-      socket.emit("error", "Failed to start game");
-    }
-  });
-
-  // player answers a question
-  socket.on("submit-answer", async ({ pin, answer }) => {
-    try {
-      const isHost = await gameService.isHost(pin, socket.id);
-      if (isHost) {
-        socket.emit("error", "Host cannot answer");
-        return;
-      }
-
-      //   const score = await gameService.submitAnswer(pin, socket.id, answer);
-
-      //   io.to(pin).emit("score-update", {
-      //     playerId: socket.id,
-      //     score,
-      //   });
-
-      await gameService.submitAnswer(pin, socket.id, answer);
-      socket.emit("answer-received");
-
-      const host = await gameService.getHost(pin);
-
-      const progress = await gameService.getAnswerProgress(pin);
-      if (progress.answered === progress.totalPlayers) {
-        const results = await gameService.endQuestion(pin);
-        io.to(host!).emit("question-results", results);
-      }
-
-      io.to(host!).emit("answer-progress", progress.answered);
-    } catch (error) {
-      socket.emit("error", "Failed to submit answer");
-    }
-  });
-
-  // host moves on to next question
-  socket.on("next-question", async ({ pin }) => {
-    try {
-      const isHost = await gameService.isHost(pin, socket.id);
-      if (!isHost) {
-        socket.emit("error", "Only host can change question");
-        return;
-      }
-
-      const question = await gameService.nextQuestion(pin);
+  "next-question": hostOnly(
+    async (payload: any, socket: Socket, io: Server) => {
+      const question = await gameService.nextQuestion(payload.pin);
 
       if (!question) {
-        const leaderboard = await gameService.getLeaderboard(pin);
-
-        io.to(pin).emit("game-finished", {
-          leaderboard,
-        });
-
+        const results = await gameService.endQuestion(payload.pin);
+        io.to(payload.pin).emit("game-finished", results);
         return;
       }
 
-      io.to(pin).emit("question", question);
-    } catch (error) {
-      socket.emit("error", "Failed to load next question");
-    }
-  });
+      io.to(payload.pin).emit("question", question);
+    },
+  ),
 
-  socket.on("end-question", async ({ pin }) => {
+  "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
+    const results = await gameService.endQuestion(payload.pin);
+    io.to(payload.pin).emit("question-results", results);
+  }),
+};
+
+type HandlerKeys = keyof typeof handlers;
+
+export const gameSocket = (io: Server, socket: Socket) => {
+  socket.on("game-event", async ({ type, payload }) => {
     try {
-      const isHost = await gameService.isHost(pin, socket.id);
-      if (!isHost) {
-        socket.emit("error", "Only host can end question");
+      const handler = handlers[type as HandlerKeys];
+      if (!handler) {
+        socket.emit("error", `Unknown event type: ${type}`);
         return;
       }
-
-      const results = await gameService.endQuestion(pin);
-
-      io.to(pin).emit("question-results", results);
-    } catch (error) {
-      socket.emit("error", "Failed to end question");
+      await handler(payload, socket, io);
+    } catch (err: any) {
+      socket.emit("error", err.message || "An error occurred");
     }
   });
 };
