@@ -69,8 +69,15 @@ export const gameSocket = (io: Server, socket: Socket) => {
       await gameService.submitAnswer(pin, socket.id, answer);
       socket.emit("answer-received");
 
+      const host = await gameService.getHost(pin);
+
       const progress = await gameService.getAnswerProgress(pin);
-      io.to(pin).emit("answer-progress", progress);
+      if (progress.answered === progress.totalPlayers) {
+        const results = await gameService.endQuestion(pin);
+        io.to(host!).emit("question-results", results);
+      }
+
+      io.to(host!).emit("answer-progress", progress.answered);
     } catch (error) {
       socket.emit("error", "Failed to submit answer");
     }

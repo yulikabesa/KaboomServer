@@ -165,6 +165,10 @@ export const gameService = {
     };
   },
 
+  async getHost(pin: string) {
+    return await redisClient.hGet(redisKeys.meta(pin), "host");
+  },
+
   async getPlayers(pin: string) {
     return await redisClient.hGetAll(redisKeys.players(pin));
   },
