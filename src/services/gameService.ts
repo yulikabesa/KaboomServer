@@ -47,7 +47,7 @@ export const gameService = {
   },
 
   async submitAnswer(pin: string, playerId: string, answer: number) {
-    const meta = await gameRepository.getMeta(pin);
+    const meta = await gameRepository.getMetaOrThrow(pin);
     const qIdx = Number(meta.currentQuestion);
 
     const isNew = await gameRepository.submitAnswer(
@@ -59,8 +59,7 @@ export const gameService = {
 
     if (!isNew) return;
 
-    const question = await gameRepository.getQuestion(pin, qIdx);
-
+    const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
     const score = gameEngine.calculateScore(question.correctIndexes, answer);
 
     if (score > 0) {
@@ -71,13 +70,13 @@ export const gameService = {
   },
 
   async endQuestion(pin: string) {
-    const meta = await gameRepository.getMeta(pin);
+    const meta = await gameRepository.getMetaOrThrow(pin);
     const qIdx = Number(meta.currentQuestion);
 
-    const question = await gameRepository.getQuestion(pin, qIdx);
-    const answers = await gameRepository.getAnswers(pin, qIdx);
+    const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
+    const answers = await gameRepository.getAnswers(pin, qIdx) || {};
     const leaderboardRaw = await gameRepository.getLeaderboard(pin);
-    const players = await gameRepository.getPlayers(pin);
+    const players = await gameRepository.getPlayers(pin) || {};
 
     return {
       correctAnswers: question.correctIndexes,
@@ -94,8 +93,7 @@ export const gameService = {
   },
 
   async nextQuestion(pin: string) {
-    const meta = await gameRepository.getMeta(pin);
-
+    const meta = await gameRepository.getMetaOrThrow(pin);
     const next = Number(meta.currentQuestion) + 1;
 
     if (next >= Number(meta.questionCount)) {
@@ -110,13 +108,12 @@ export const gameService = {
   },
 
   async getAnswerProgress(pin: string) {
-    const meta = await gameRepository.getMeta(pin);
+    const meta = await gameRepository.getMetaOrThrow(pin);
     const qIdx = Number(meta.currentQuestion);
 
     const answered = await gameRepository.getAnswerCount(pin, qIdx);
-    const totalPlayers = Object.keys(
-      await gameRepository.getPlayers(pin),
-    ).length;
+    const players = (await gameRepository.getPlayers(pin)) || {};
+    const totalPlayers = Object.keys(players).length;
 
     return { answered, totalPlayers };
   },

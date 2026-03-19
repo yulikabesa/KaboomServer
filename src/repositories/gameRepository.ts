@@ -26,7 +26,8 @@ export const gameRepository = {
   },
 
   async getMeta(pin: string) {
-    return await redisClient.hGetAll(redisKeys.meta(pin));
+    const meta = await redisClient.hGetAll(redisKeys.meta(pin));
+    return Object.keys(meta).length === 0 ? null : meta;
   },
 
   async getHost(pin: string) {
@@ -38,7 +39,8 @@ export const gameRepository = {
   },
 
   async getPlayers(pin: string) {
-    return await redisClient.hGetAll(redisKeys.players(pin));
+    const players = await redisClient.hGetAll(redisKeys.players(pin));
+    return Object.keys(players).length === 0 ? null : players;
   },
 
   async initLeaderboard(pin: string, playerId: string) {
@@ -71,13 +73,14 @@ export const gameRepository = {
 
   async getQuestion(pin: string, index: number) {
     const data = await redisClient.hGetAll(redisKeys.question(pin, index));
-
-    return {
-      question: data.question,
-      answers: JSON.parse(data.answers),
-      correctIndexes: JSON.parse(data.correctIndexes),
-      timeLimit: Number(data.timeLimit),
-    };
+    return Object.keys(data).length === 0
+      ? null
+      : {
+          question: data.question,
+          answers: JSON.parse(data.answers) as string[],
+          correctIndexes: JSON.parse(data.correctIndexes) as number[],
+          timeLimit: Number(data.timeLimit),
+        };
   },
 
   async submitAnswer(
@@ -94,10 +97,23 @@ export const gameRepository = {
   },
 
   async getAnswers(pin: string, qIdx: number) {
-    return await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
+    const answers = await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
+    return Object.keys(answers).length === 0 ? null : answers;
   },
 
   async getAnswerCount(pin: string, qIdx: number) {
     return await redisClient.hLen(redisKeys.answers(pin, qIdx));
+  },
+
+  async getMetaOrThrow(pin: string) {
+    const meta = await this.getMeta(pin);
+    if (!meta) throw new Error("Game not found");
+    return meta;
+  },
+
+  async getQuestionOrThrow(pin: string, index: number) {
+    const question = await this.getQuestion(pin, index);
+    if (!question) throw new Error("Question not found");
+    return question;
   },
 };

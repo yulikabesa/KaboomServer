@@ -74,7 +74,7 @@ const handlers = {
 
   "validate-pin": async (payload: any, socket: Socket) => {
     const meta = await gameRepository.getMeta(payload.pin);
-    if (Object.keys(meta).length === 0) {
+    if (!meta) {
       socket.emit("pin-error", "Invalid pin");
     } else if (meta.state !== "lobby") {
       socket.emit("pin-error", "Game in progress");
