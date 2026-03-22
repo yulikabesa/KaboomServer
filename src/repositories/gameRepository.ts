@@ -118,10 +118,10 @@ export const gameRepository = {
   },
 
   async setConnection(pin: string, userId: string, socketId: string) {
-    await redisClient.hSet(`session:${pin}:connections`, userId, socketId);
+    await redisClient.hSet(redisKeys.connections(pin), userId, socketId);
   },
 
   async getConnection(pin: string, userId: string) {
-    return await redisClient.hGet(`session:${pin}:connections`, userId);
+    return await redisClient.hGet(redisKeys.connections(pin), userId);
   },
 };
