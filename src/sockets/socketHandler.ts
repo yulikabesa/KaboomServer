@@ -7,7 +7,7 @@ import { gameRepository } from "../repositories/gameRepository";
 
 function verifyToken(token: string): string {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    return decoded.userId;
+    return decoded._id;
 }
 
 export const initSocket = (io: Server) => {
