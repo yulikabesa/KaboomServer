@@ -22,7 +22,7 @@ export interface IUser extends Document {
 interface IUserModel extends Model<IUser> {
   findByCredentials(
     email: string,
-    password: string
+    password: string,
   ): Promise<
     Document<unknown, {}, IUser> & IUser & Required<{ _id: ObjectId }>
   > | null;
@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema<IUser, IUserModel>({
   },
   isAdmin: {
     type: Boolean,
-    required: true,
+    default: false,
   },
   tokens: [
     {
@@ -96,7 +96,7 @@ userSchema.methods.generateAuthToken = async function () {
   const token = jwt.sign(
     { _id: user._id.toString() },
     process.env.JWT_SECRET as string,
-    { expiresIn: '1h' } 
+    { expiresIn: "1h" },
   );
 
   user.tokens = user.tokens.concat({ token });
@@ -107,7 +107,7 @@ userSchema.methods.generateAuthToken = async function () {
 
 userSchema.statics.findByCredentials = async (
   email: string,
-  password: string
+  password: string,
 ) => {
   const user = await User.findOne({ email });
 
