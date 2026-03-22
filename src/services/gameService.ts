@@ -6,7 +6,7 @@ const generatePin = () =>
   Math.floor(1000000 + Math.random() * 9000000).toString();
 
 export const gameService = {
-  async createGameSession(quizId: string, hostUserId: string) {
+  async createGameSession(quizId: string, userId: string) {
     const quiz = await QuizService.getQuizById(quizId);
     if (!quiz) {
       throw new Error("Quiz not found");
@@ -20,7 +20,7 @@ export const gameService = {
     await gameRepository.createMeta(
       pin,
       quizId,
-      hostUserId,
+      userId,
       quiz.questions.length,
     );
 

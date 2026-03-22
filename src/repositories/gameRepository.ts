@@ -34,8 +34,8 @@ export const gameRepository = {
     return await redisClient.hGet(redisKeys.meta(pin), "host");
   },
 
-  async addPlayer(pin: string, socketId: string, nickname: string) {
-    await redisClient.hSet(redisKeys.players(pin), socketId, nickname);
+  async addPlayer(pin: string, userId: string, nickname: string) {
+    await redisClient.hSet(redisKeys.players(pin), userId, nickname);
   },
 
   async getPlayers(pin: string) {
