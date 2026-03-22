@@ -124,4 +124,17 @@ export const gameRepository = {
   async getConnection(pin: string, userId: string) {
     return await redisClient.hGet(redisKeys.connections(pin), userId);
   },
+
+  async setUserGame(userId: string, pin: string) {
+    await redisClient.set(redisKeys.userGame(userId), pin);
+  },
+
+  async getUserGame(userId: string) {
+    return await redisClient.get(redisKeys.userGame(userId));
+  },
+
+  async clearUserGame(userId: string) {
+    // when game finishes/ host leaves or something idkkk
+    await redisClient.del(redisKeys.userGame(userId));
+  },
 };

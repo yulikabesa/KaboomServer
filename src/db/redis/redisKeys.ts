@@ -15,8 +15,11 @@ export const redisKeys = {
   leaderboard: (pin: string) =>
     `session:${pin}:leaderboard`,
 
-  connections: (pin: string) => 
+  connections: (pin: string) =>
     `session:${pin}:connections`,
+
+  userGame: (userId: string) =>
+    `user:${userId}:game`,
 
   // answerCounts: (pin: string, qIdx: number) => 
   //   `session:${pin}:answerCounts:${qIdx}`

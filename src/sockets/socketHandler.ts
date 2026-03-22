@@ -35,16 +35,16 @@ export const initSocket = (io: Server) => {
         const userId = socket.data.userId;
         console.log("UserId:", userId);
 
-        // AUTO REJOIN ROOM
+        // AUTO REJOIN 
         try {
-            const game = await gameRepository.getGameByUserId(userId);
+            const pin = await gameRepository.getUserGame(userId);
 
-            if (game) {
-                socket.join(game.pin);
+            if (pin) {
+                socket.join(pin);
 
-                await gameRepository.setConnection(game.pin, userId, socket.id);
+                await gameRepository.setConnection(pin, userId, socket.id);
 
-                console.log(`${userId} auto-rejoined game ${game.pin}`);
+                console.log(`${userId} auto-rejoined game ${pin}`);
             }
         } catch (err) {
             console.error("Auto rejoin failed:", err);

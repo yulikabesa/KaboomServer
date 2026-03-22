@@ -22,7 +22,7 @@ const handlers = {
 
     // save connection
     await gameRepository.setConnection(game.pin, userId, socket.id);
-
+    await gameRepository.setUserGame(userId, game.pin);
     socket.emit("game-created", { pin: game.pin });
   },
 
@@ -38,6 +38,7 @@ const handlers = {
     await gameRepository.setConnection(payload.pin, userId, socket.id);
 
     socket.join(payload.pin);
+    await gameRepository.setUserGame(userId, payload.pin);
     io.to(payload.pin).emit("player-joined", player);
   },
 
