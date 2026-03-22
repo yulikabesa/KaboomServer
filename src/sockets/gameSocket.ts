@@ -4,28 +4,36 @@ import { gameRepository } from "../repositories/gameRepository";
 
 const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
-  async (payload: any, socket: Socket, io: Server) => {
-    const isHost = await gameService.isHost(payload.pin, socket.id);
-    if (!isHost) {
-      socket.emit("error", "Only host can perform this action");
-      return;
-    }
-    await handler(payload, socket, io);
-  };
+    async (payload: any, socket: Socket, io: Server) => {
+      const isHost = await gameService.isHost(payload.pin, payload.userId);
+      if (!isHost) {
+        socket.emit("error", "Only host can perform this action");
+        return;
+      }
+      await handler(payload, socket, io);
+    };
 
 const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
-    const game = await gameService.createGameSession(payload.quizId, socket.id);
+    const game = await gameService.createGameSession(payload.quizId, payload.hostUserId);
     socket.join(game.pin);
+
+    // save connection
+    await gameRepository.setConnection(game.pin, payload.hostUserId, socket.id);
+
     socket.emit("game-created", { pin: game.pin });
   },
 
   "join-game": async (payload: any, socket: Socket, io: Server) => {
     const player = await gameService.addPlayer(
       payload.pin,
-      socket.id,
+      payload.userId,
       payload.nickname,
     );
+
+    // ✅ map user → socket
+    await gameRepository.setConnection(payload.pin, payload.userId, socket.id);
+
     socket.join(payload.pin);
     io.to(payload.pin).emit("player-joined", player);
   },
@@ -38,7 +46,7 @@ const handlers = {
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const score = await gameService.submitAnswer(
       payload.pin,
-      socket.id,
+      payload.userId,
       payload.answer,
     );
     socket.emit("answer-received");
@@ -82,6 +90,12 @@ const handlers = {
       socket.emit("pin-valid");
     }
   },
+
+  "rejoin-game": async (payload: any, socket: Socket) => {
+    const userId = payload.userId;
+    await gameRepository.setConnection(payload.pin, userId, socket.id);
+    socket.join(payload.pin);
+  },
 };
 
 type HandlerKeys = keyof typeof handlers;
@@ -100,3 +114,10 @@ export const gameSocket = (io: Server, socket: Socket) => {
     }
   });
 };
+
+
+
+// later in order to send if player was right or wrong to the specific player
+// will need to do:
+// const socketId = await gameRepository.getConnection(pin, userId);
+// io.to(socketId!).emit("answer-result", { correct: true });

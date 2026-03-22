@@ -6,7 +6,7 @@ const generatePin = () =>
   Math.floor(1000000 + Math.random() * 9000000).toString();
 
 export const gameService = {
-  async createGameSession(quizId: string, hostSocketId: string) {
+  async createGameSession(quizId: string, hostUserId: string) {
     const quiz = await QuizService.getQuizById(quizId);
     if (!quiz) {
       throw new Error("Quiz not found");
@@ -20,7 +20,7 @@ export const gameService = {
     await gameRepository.createMeta(
       pin,
       quizId,
-      hostSocketId,
+      hostUserId,
       quiz.questions.length,
     );
 
@@ -31,11 +31,11 @@ export const gameService = {
     return { pin };
   },
 
-  async addPlayer(pin: string, socketId: string, nickname: string) {
-    await gameRepository.addPlayer(pin, socketId, nickname);
-    await gameRepository.initLeaderboard(pin, socketId);
+  async addPlayer(pin: string, userId: string, nickname: string) {
+    await gameRepository.addPlayer(pin, userId, nickname);
+    await gameRepository.initLeaderboard(pin, userId);
 
-    return { id: socketId, nickname };
+    return { id: userId, nickname };
   },
 
   async startGame(pin: string) {
@@ -118,9 +118,9 @@ export const gameService = {
     return { answered, totalPlayers };
   },
 
-  async isHost(pin: string, socketId: string) {
+  async isHost(pin: string, userId: string) {
     const host = await gameRepository.getHost(pin);
-    return host === socketId;
+    return host === userId;
   },
 
   async getHost(pin: string) {

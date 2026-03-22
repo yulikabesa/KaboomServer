@@ -76,11 +76,11 @@ export const gameRepository = {
     return Object.keys(data).length === 0
       ? null
       : {
-          question: data.question,
-          answers: JSON.parse(data.answers) as string[],
-          correctIndexes: JSON.parse(data.correctIndexes) as number[],
-          timeLimit: Number(data.timeLimit),
-        };
+        question: data.question,
+        answers: JSON.parse(data.answers) as string[],
+        correctIndexes: JSON.parse(data.correctIndexes) as number[],
+        timeLimit: Number(data.timeLimit),
+      };
   },
 
   async submitAnswer(
@@ -115,5 +115,13 @@ export const gameRepository = {
     const question = await this.getQuestion(pin, index);
     if (!question) throw new Error("Question not found");
     return question;
+  },
+
+  async setConnection(pin: string, userId: string, socketId: string) {
+    await redisClient.hSet(`session:${pin}:connections`, userId, socketId);
+  },
+
+  async getConnection(pin: string, userId: string) {
+    return await redisClient.hGet(`session:${pin}:connections`, userId);
   },
 };
