@@ -17,6 +17,10 @@ export const gameRepository = {
     });
   },
 
+  async setMeta(pin: string, updates: any) {
+    await redisClient.hSet(redisKeys.meta(pin), updates as any);
+  },
+
   async setState(pin: string, state: string) {
     await redisClient.hSet(redisKeys.meta(pin), "state", state);
   },
@@ -76,11 +80,11 @@ export const gameRepository = {
     return Object.keys(data).length === 0
       ? null
       : {
-        question: data.question,
-        answers: JSON.parse(data.answers) as string[],
-        correctIndexes: JSON.parse(data.correctIndexes) as number[],
-        timeLimit: Number(data.timeLimit),
-      };
+          question: data.question,
+          answers: JSON.parse(data.answers) as string[],
+          correctIndexes: JSON.parse(data.correctIndexes) as number[],
+          timeLimit: Number(data.timeLimit),
+        };
   },
 
   async submitAnswer(
@@ -127,7 +131,10 @@ export const gameRepository = {
 
   async getPlayer(pin: string, userId: string) {
     return await redisClient.hGet(redisKeys.players(pin), userId);
-  }
+  },
+
+  // todo
+  async getFullState(pin: string) {},
 
   // async setUserGame(userId: string, pin: string) {
   //   await redisClient.set(redisKeys.userGame(userId), pin);

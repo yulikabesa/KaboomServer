@@ -142,15 +142,18 @@ export const gameService = {
 
     await gameRepository.setConnection(pin, userId, socketId);
 
-    // Fetch game state
-    // const gameState = await gameRepository.getFullState(pin);
+    // todo: Fetch game state
+    const gameState = await gameRepository.getFullState(pin);
 
-    // Format state for this player
-    // const playerView = engine.buildPlayerView(gameState, userId);
+    // todo: Format state for this player
+    let playerView = gameState;
+      // meta.host === userId
+      //   ? gameEngine.buildHostView(gameState, userId)
+      //   : gameEngine.buildPlayerView(gameState, userId);
 
     return {
       success: true,
-      // state: playerView,
+      state: playerView,
     };
   },
 };

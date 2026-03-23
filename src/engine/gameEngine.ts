@@ -22,4 +22,14 @@ export const gameEngine = {
 
     return counts;
   },
+
+  // todo
+  buildPlayerView(gameState: any, userId: string) {
+
+  },
+
+  // todo
+  buildHostView(gameState: any) {
+
+  },
 };
