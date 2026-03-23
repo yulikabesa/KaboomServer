@@ -4,15 +4,15 @@ import { gameRepository } from "../repositories/gameRepository";
 
 const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
-    async (payload: any, socket: Socket, io: Server) => {
-      const userId = socket.data.userId;
-      const isHost = await gameService.isHost(payload.pin, userId);
-      if (!isHost) {
-        socket.emit("error", "Only host can perform this action");
-        return;
-      }
-      await handler(payload, socket, io);
-    };
+  async (payload: any, socket: Socket, io: Server) => {
+    const userId = socket.data.userId;
+    const isHost = await gameService.isHost(payload.pin, userId);
+    if (!isHost) {
+      socket.emit("error", "Only host can perform this action");
+      return;
+    }
+    await handler(payload, socket, io);
+  };
 
 const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
@@ -22,7 +22,7 @@ const handlers = {
 
     // save connection
     await gameRepository.setConnection(game.pin, userId, socket.id);
-    await gameRepository.setUserGame(userId, game.pin);
+    // await gameRepository.setUserGame(userId, game.pin);
     socket.emit("game-created", { pin: game.pin });
   },
 
@@ -34,11 +34,11 @@ const handlers = {
       payload.nickname,
     );
 
-    // ✅ map user → socket
+    // map user → socket
     await gameRepository.setConnection(payload.pin, userId, socket.id);
 
     socket.join(payload.pin);
-    await gameRepository.setUserGame(userId, payload.pin);
+    // await gameRepository.setUserGame(userId, payload.pin);
     io.to(payload.pin).emit("player-joined", player);
   },
 
@@ -58,7 +58,10 @@ const handlers = {
 
     const progress = await gameService.getAnswerProgress(payload.pin);
     const hostUserId = await gameService.getHost(payload.pin);
-    const hostSocketId = await gameRepository.getConnection(payload.pin, hostUserId!);
+    const hostSocketId = await gameRepository.getConnection(
+      payload.pin,
+      hostUserId!,
+    );
 
     if (hostSocketId) {
       io.to(hostSocketId).emit("answer-progress", progress.answered);
@@ -90,16 +93,23 @@ const handlers = {
   }),
 
   "validate-pin": async (payload: any, socket: Socket) => {
-    const meta = await gameRepository.getMeta(payload.pin);
-    if (!meta) {
-      socket.emit("pin-error", "Invalid pin");
-    } else if (meta.state !== "lobby") {
-      socket.emit("pin-error", "Game in progress");
-    } else {
-      socket.emit("pin-valid");
-    }
+    const data = await gameService.validatePin(payload.pin);
+    socket.emit(data.status, data.message);
   },
 
+  "rejoin-game": async (payload: any, socket: Socket) => {
+    const { status } = await gameService.validatePin(payload.pin);
+    if (status === "pin-valid") {
+      const userId = socket.data.userId;
+      socket.join(payload.pin);
+      await gameRepository.setConnection(payload.pin, userId, socket.id);
+
+      // todo: send game status to player
+      socket.emit("player-rejoined", {});
+    } else {
+      socket.emit("rejoin-error", "Failed to rejoin");
+    }
+  },
 };
 
 type HandlerKeys = keyof typeof handlers;
@@ -118,8 +128,6 @@ export const gameSocket = (io: Server, socket: Socket) => {
     }
   });
 };
-
-
 
 // later in order to send if player was right or wrong to the specific player
 // will need to do:

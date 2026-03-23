@@ -17,12 +17,7 @@ export const gameService = {
       pin = generatePin();
     }
 
-    await gameRepository.createMeta(
-      pin,
-      quizId,
-      userId,
-      quiz.questions.length,
-    );
+    await gameRepository.createMeta(pin, quizId, userId, quiz.questions.length);
 
     for (let i = 0; i < quiz.questions.length; i++) {
       await gameRepository.saveQuestion(pin, i, quiz.questions[i]);
@@ -74,9 +69,9 @@ export const gameService = {
     const qIdx = Number(meta.currentQuestion);
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    const answers = await gameRepository.getAnswers(pin, qIdx) || {};
+    const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
     const leaderboardRaw = await gameRepository.getLeaderboard(pin);
-    const players = await gameRepository.getPlayers(pin) || {};
+    const players = (await gameRepository.getPlayers(pin)) || {};
 
     return {
       correctAnswers: question.correctIndexes,
@@ -125,5 +120,16 @@ export const gameService = {
 
   async getHost(pin: string) {
     return await gameRepository.getHost(pin);
+  },
+
+  async validatePin(pin: string) {
+    const meta = await gameRepository.getMeta(pin);
+    if (!meta) {
+      return { status: "pin-error", message: "Invalid pin" };
+    } else if (meta.state !== "lobby") {
+      return { status: "pin-error", message: "Game in progress" };
+    } else {
+      return { status: "pin-valid", message: null };
+    }
   },
 };
