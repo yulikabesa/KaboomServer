@@ -125,6 +125,10 @@ export const gameRepository = {
     return await redisClient.hGet(redisKeys.connections(pin), userId);
   },
 
+  async getPlayer(pin: string, userId: string) {
+    return await redisClient.hGet(redisKeys.players(pin), userId);
+  }
+
   // async setUserGame(userId: string, pin: string) {
   //   await redisClient.set(redisKeys.userGame(userId), pin);
   // },

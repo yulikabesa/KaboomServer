@@ -125,11 +125,32 @@ export const gameService = {
   async validatePin(pin: string) {
     const meta = await gameRepository.getMeta(pin);
     if (!meta) {
-      return { status: "pin-error", message: "Invalid pin" };
+      return { success: false, error: "Invalid pin" };
     } else if (meta.state !== "lobby") {
-      return { status: "pin-error", message: "Game in progress" };
+      return { success: false, error: "Game in progress" };
     } else {
-      return { status: "pin-valid", message: null };
+      return { success: true, error: null };
     }
+  },
+
+  async reconnect(pin: string, userId: string, socketId: string) {
+    const meta = await gameRepository.getMeta(pin);
+    if (!meta) return { success: false, error: "Game not found" };
+
+    const player = await gameRepository.getPlayer(pin, userId);
+    if (!player) return { success: false, error: "Not in game" };
+
+    await gameRepository.setConnection(pin, userId, socketId);
+
+    // Fetch game state
+    // const gameState = await gameRepository.getFullState(pin);
+
+    // Format state for this player
+    // const playerView = engine.buildPlayerView(gameState, userId);
+
+    return {
+      success: true,
+      // state: playerView,
+    };
   },
 };

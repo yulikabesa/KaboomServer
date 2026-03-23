@@ -94,21 +94,23 @@ const handlers = {
 
   "validate-pin": async (payload: any, socket: Socket) => {
     const data = await gameService.validatePin(payload.pin);
-    socket.emit(data.status, data.message);
+    socket.emit(data.success ? "pin-valid" : "pin-error", data.error);
   },
 
   "rejoin-game": async (payload: any, socket: Socket) => {
-    const { status } = await gameService.validatePin(payload.pin);
-    if (status === "pin-valid") {
-      const userId = socket.data.userId;
-      socket.join(payload.pin);
-      await gameRepository.setConnection(payload.pin, userId, socket.id);
+    const userId = socket.data.userId;
+    const data = await gameService.reconnect(payload.pin, userId, socket.id);
 
-      // todo: send game status to player
-      socket.emit("player-rejoined", {});
-    } else {
-      socket.emit("rejoin-error", "Failed to rejoin");
+    if (!data.success) {
+      socket.emit("rejoin-error", data.error);
+      return;
     }
+
+    socket.join(payload.pin);
+    socket.emit(
+      "player-rejoined",
+      // data.state
+    );
   },
 };
 
