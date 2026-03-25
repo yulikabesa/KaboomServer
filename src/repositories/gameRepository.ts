@@ -145,7 +145,7 @@ export const gameRepository = {
       meta,
       players,
       leaderboard,
-      currentQuestion: question,
+      question,
       answers,
     };
   },
