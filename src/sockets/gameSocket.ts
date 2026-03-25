@@ -38,13 +38,15 @@ const handlers = {
     await gameRepository.setConnection(payload.pin, userId, socket.id);
 
     socket.join(payload.pin);
-    // await gameRepository.setUserGame(userId, payload.pin);
     io.to(payload.pin).emit("player-joined", player);
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     const question = await gameService.startGame(payload.pin);
-    io.to(payload.pin).emit("game-started", { question });
+    io.to(payload.pin).emit("game-state", {
+      phase: "question",
+      data: question,
+    });
   }),
 
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
@@ -69,7 +71,10 @@ const handlers = {
 
     if (progress.answered === progress.totalPlayers) {
       const results = await gameService.endQuestion(payload.pin);
-      io.to(payload.pin).emit("question-results", results);
+      io.to(payload.pin).emit("game-state", {
+        phase: "results",
+        data: results,
+      });
     }
   },
 
@@ -78,18 +83,36 @@ const handlers = {
       const question = await gameService.nextQuestion(payload.pin);
 
       if (!question) {
-        const results = await gameService.endQuestion(payload.pin);
-        io.to(payload.pin).emit("game-finished", results);
+        const leaderboard = await gameService.showLeaderboard(payload.pin);
+        io.to(payload.pin).emit("game-state", {
+          phase: "leaderboard",
+          data: leaderboard,
+        });
         return;
       }
 
-      io.to(payload.pin).emit("question", question);
+      io.to(payload.pin).emit("game-state", {
+        phase: "question",
+        data: question,
+      });
     },
   ),
 
   "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     const results = await gameService.endQuestion(payload.pin);
-    io.to(payload.pin).emit("question-results", results);
+    io.to(payload.pin).emit("game-state", {
+      phase: "results",
+      data: results,
+    });
+  }),
+
+  "show-leaderboard": hostOnly(async (payload, socket, io) => {
+    const leaderboard = await gameService.showLeaderboard(payload.pin);
+
+    io.to(payload.pin).emit("game-state", {
+      phase: "leaderboard",
+      data: leaderboard,
+    });
   }),
 
   "validate-pin": async (payload: any, socket: Socket) => {
@@ -107,10 +130,7 @@ const handlers = {
     }
 
     socket.join(payload.pin);
-    socket.emit(
-      "player-rejoined",
-      // data.state
-    );
+    socket.emit("game-state", data.state);
   },
 };
 

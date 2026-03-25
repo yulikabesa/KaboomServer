@@ -12,6 +12,7 @@ export const gameRepository = {
       quizId,
       host,
       state: "lobby",
+      phase: "",
       currentQuestion: 0,
       questionCount,
     });
@@ -19,14 +20,6 @@ export const gameRepository = {
 
   async setMeta(pin: string, updates: any) {
     await redisClient.hSet(redisKeys.meta(pin), updates as any);
-  },
-
-  async setState(pin: string, state: string) {
-    await redisClient.hSet(redisKeys.meta(pin), "state", state);
-  },
-
-  async setCurrentQuestion(pin: string, index: number) {
-    await redisClient.hSet(redisKeys.meta(pin), "currentQuestion", index);
   },
 
   async getMeta(pin: string) {
@@ -133,8 +126,29 @@ export const gameRepository = {
     return await redisClient.hGet(redisKeys.players(pin), userId);
   },
 
-  // todo
-  async getFullState(pin: string) {},
+  async getFullState(pin: string) {
+    const meta = await this.getMeta(pin);
+    if (!meta) return null;
+
+    const players = (await this.getPlayers(pin)) || {};
+    const leaderboard = await this.getLeaderboard(pin);
+
+    let question = null;
+    let answers = null;
+
+    if (meta.state === "playing") {
+      question = await this.getQuestion(pin, Number(meta.currentQuestion));
+      answers = await this.getAnswers(pin, Number(meta.currentQuestion));
+    }
+
+    return {
+      meta,
+      players,
+      leaderboard,
+      currentQuestion: question,
+      answers,
+    };
+  },
 
   // async setUserGame(userId: string, pin: string) {
   //   await redisClient.set(redisKeys.userGame(userId), pin);

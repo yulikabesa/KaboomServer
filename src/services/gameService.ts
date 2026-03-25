@@ -34,8 +34,11 @@ export const gameService = {
   },
 
   async startGame(pin: string) {
-    await gameRepository.setState(pin, "playing");
-    await gameRepository.setCurrentQuestion(pin, 0);
+    await gameRepository.setMeta(pin, {
+      state: "playing",
+      currentQuestion: 0,
+      phase: "question",
+    });
 
     const q = await gameRepository.getQuestion(pin, 0);
     return gameEngine.formatQuestion(q);
@@ -70,8 +73,8 @@ export const gameService = {
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
     const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
-    const leaderboardRaw = await gameRepository.getLeaderboard(pin);
-    const players = (await gameRepository.getPlayers(pin)) || {};
+
+    await gameRepository.setMeta(pin, { phase: "results" });
 
     return {
       correctAnswers: question.correctIndexes,
@@ -79,11 +82,6 @@ export const gameService = {
         answers,
         question.answers.length,
       ),
-      leaderboard: leaderboardRaw.map((p) => ({
-        playerId: p.value,
-        nickname: players[p.value],
-        score: p.score,
-      })),
     };
   },
 
@@ -92,11 +90,17 @@ export const gameService = {
     const next = Number(meta.currentQuestion) + 1;
 
     if (next >= Number(meta.questionCount)) {
-      await gameRepository.setState(pin, "finished");
+      await gameRepository.setMeta(pin, {
+        state: "finished",
+        phase: "leaderboard",
+      });
       return null;
     }
 
-    await gameRepository.setCurrentQuestion(pin, next);
+    await gameRepository.setMeta(pin, {
+      currentQuestion: next,
+      phase: "question",
+    });
 
     const q = await gameRepository.getQuestion(pin, next);
     return gameEngine.formatQuestion(q);
@@ -111,6 +115,17 @@ export const gameService = {
     const totalPlayers = Object.keys(players).length;
 
     return { answered, totalPlayers };
+  },
+
+  async showLeaderboard(pin: string) {
+    await gameRepository.setMeta(pin, {
+      phase: "leaderboard",
+    });
+
+    const leaderboard = await gameRepository.getLeaderboard(pin);
+    const players = (await gameRepository.getPlayers(pin)) || {};
+
+    return gameEngine.mapLeaderboard(leaderboard, players);
   },
 
   async isHost(pin: string, userId: string) {
@@ -142,14 +157,13 @@ export const gameService = {
 
     await gameRepository.setConnection(pin, userId, socketId);
 
-    // todo: Fetch game state
     const gameState = await gameRepository.getFullState(pin);
 
-    // todo: Format state for this player
+    // Format full state for this player
     let playerView = gameState;
-      // meta.host === userId
-      //   ? gameEngine.buildHostView(gameState, userId)
-      //   : gameEngine.buildPlayerView(gameState, userId);
+    meta.host === userId
+      ? gameEngine.buildHostView(gameState)
+      : gameEngine.buildPlayerView(gameState, userId);
 
     return {
       success: true,

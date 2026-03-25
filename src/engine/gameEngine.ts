@@ -23,13 +23,86 @@ export const gameEngine = {
     return counts;
   },
 
-  // todo
-  buildPlayerView(gameState: any, userId: string) {
-
+  mapLeaderboard(leaderboard: any[], players: any) {
+    return leaderboard.map((p) => ({
+      playerId: p.value,
+      nickname: players[p.value],
+      score: p.score,
+    }));
   },
 
-  // todo
-  buildHostView(gameState: any) {
+  buildPlayerView(gameState: any, userId: string) {
+    const { meta, players, leaderboard, question, answers } = gameState;
+    const playerAnswer = answers?.[userId];
 
+    switch (meta.phase) {
+      case "question":
+        return {
+          phase: "question",
+          data: {
+            question: question?.question,
+            hasAnswered: playerAnswer !== undefined,
+          },
+        };
+
+      case "results":
+        return {
+          phase: "results",
+          data: {
+            isCorrect:
+              playerAnswer !== undefined
+                ? question.correctIndexes.includes(Number(playerAnswer)) // fix 
+                : null,
+          },
+        };
+
+      case "leaderboard":
+        return {
+          phase: "leaderboard",
+          data: this.mapLeaderboard(leaderboard, players),
+        };
+
+      default:
+        return { phase: meta.phase, data: {} };
+    }
+  },
+
+  buildHostView(gameState: any) {
+    const { meta, players, leaderboard, question, answers } = gameState;
+
+    switch (meta.phase) {
+      case "question":
+        return {
+          phase: "question",
+          data: {
+            question: question?.question,
+            answers: question?.answers,
+            timeLimit: question?.timeLimit,
+            answeredCount: answers ? Object.keys(answers).length : 0,
+          },
+        };
+
+      case "results":
+        return {
+          phase: "results",
+          data: {
+            answers: answers,
+            correctAnswers: question?.correctIndexes,
+            distribution: this.buildDistribution(
+              answers || {},
+              question?.answers.length || 0,
+            ),
+          },
+        };
+
+      case "leaderboard":
+        return {
+          phase: "leaderboard",
+          data: this.mapLeaderboard(leaderboard, players),
+        };
+
+      default:
+        return { phase: meta.phase, data: {} };
+    }
   },
 };
