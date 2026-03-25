@@ -41,12 +41,12 @@ export const gameService = {
     });
 
     const q = await gameRepository.getQuestion(pin, 0);
-    return gameEngine.formatQuestion(q);
+    return q ? gameEngine.formatQuestion(q) : null;
   },
 
   async submitAnswer(pin: string, playerId: string, answer: number) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    const qIdx = Number(meta.currentQuestion);
+    const qIdx = meta.currentQuestion;
 
     const isNew = await gameRepository.submitAnswer(
       pin,
@@ -69,7 +69,7 @@ export const gameService = {
 
   async endQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    const qIdx = Number(meta.currentQuestion);
+    const qIdx = meta.currentQuestion;
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
     const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
@@ -87,9 +87,9 @@ export const gameService = {
 
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    const next = Number(meta.currentQuestion) + 1;
+    const next = meta.currentQuestion + 1;
 
-    if (next >= Number(meta.questionCount)) {
+    if (next >= meta.questionCount) {
       await gameRepository.setMeta(pin, {
         state: "finished",
         phase: "leaderboard",
@@ -103,12 +103,12 @@ export const gameService = {
     });
 
     const q = await gameRepository.getQuestion(pin, next);
-    return gameEngine.formatQuestion(q);
+    return q ? gameEngine.formatQuestion(q) : null;
   },
 
   async getAnswerProgress(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    const qIdx = Number(meta.currentQuestion);
+    const qIdx = meta.currentQuestion;
 
     const answered = await gameRepository.getAnswerCount(pin, qIdx);
     const players = (await gameRepository.getPlayers(pin)) || {};
@@ -158,12 +158,15 @@ export const gameService = {
     await gameRepository.setConnection(pin, userId, socketId);
 
     const gameState = await gameRepository.getFullState(pin);
+    if (!gameState) {
+      return { success: false, error: "Game not found" };
+    }
 
     // Format full state for this player
     let playerView =
-    meta.host === userId
-      ? gameEngine.buildHostView(gameState)
-      : gameEngine.buildPlayerView(gameState, userId);
+      meta.host === userId
+        ? gameEngine.buildHostView(gameState)
+        : gameEngine.buildPlayerView(gameState, userId);
 
     return {
       success: true,

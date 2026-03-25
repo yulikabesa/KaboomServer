@@ -1,5 +1,7 @@
+import { GameFullState, GameQuestion } from "../types/game";
+
 export const gameEngine = {
-  formatQuestion(q: any) {
+  formatQuestion(q: GameQuestion) {
     return {
       question: q.question,
       answers: q.answers,
@@ -31,7 +33,7 @@ export const gameEngine = {
     }));
   },
 
-  buildPlayerView(gameState: any, userId: string) {
+  buildPlayerView(gameState: GameFullState, userId: string) {
     const { meta, players, leaderboard, question, answers } = gameState;
     const playerAnswer = answers?.[userId];
 
@@ -51,7 +53,7 @@ export const gameEngine = {
           data: {
             isCorrect:
               playerAnswer !== undefined
-                ? question.correctIndexes.includes(Number(playerAnswer)) // fix 
+                ? question?.correctIndexes.includes(Number(playerAnswer)) // fix
                 : null,
           },
         };
@@ -67,7 +69,7 @@ export const gameEngine = {
     }
   },
 
-  buildHostView(gameState: any) {
+  buildHostView(gameState: GameFullState) {
     const { meta, players, leaderboard, question, answers } = gameState;
 
     switch (meta.phase) {

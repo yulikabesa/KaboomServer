@@ -1,5 +1,6 @@
 import { redisClient } from "../db/redis/redis";
 import { redisKeys } from "../db/redis/redisKeys";
+import { GameMeta, GamePhase, GameState, GameFullState, GameQuestion } from "../types/game";
 
 export const gameRepository = {
   async createMeta(
@@ -12,19 +13,28 @@ export const gameRepository = {
       quizId,
       host,
       state: "lobby",
-      phase: "",
+      phase: "lobby",
       currentQuestion: 0,
       questionCount,
     });
   },
 
-  async setMeta(pin: string, updates: any) {
-    await redisClient.hSet(redisKeys.meta(pin), updates as any);
+  async setMeta(pin: string, updates: Partial<GameMeta>) {
+    await redisClient.hSet(redisKeys.meta(pin), updates);
   },
 
-  async getMeta(pin: string) {
+  async getMeta(pin: string): Promise<GameMeta | null> {
     const meta = await redisClient.hGetAll(redisKeys.meta(pin));
-    return Object.keys(meta).length === 0 ? null : meta;
+    if (Object.keys(meta).length === 0) return null;
+
+    return {
+      quizId: meta.quizId,
+      host: meta.host,
+      state: meta.state as GameState,
+      phase: meta.phase as GamePhase,
+      currentQuestion: Number(meta.currentQuestion),
+      questionCount: Number(meta.questionCount),
+    };
   },
 
   async getHost(pin: string) {
@@ -59,7 +69,7 @@ export const gameRepository = {
     );
   },
 
-  async saveQuestion(pin: string, index: number, q: any) {
+  async saveQuestion(pin: string, index: number, q: GameQuestion) {
     await redisClient.hSet(redisKeys.question(pin, index), {
       question: q.question,
       answers: JSON.stringify(q.answers),
@@ -68,7 +78,7 @@ export const gameRepository = {
     });
   },
 
-  async getQuestion(pin: string, index: number) {
+  async getQuestion(pin: string, index: number): Promise<GameQuestion | null> {
     const data = await redisClient.hGetAll(redisKeys.question(pin, index));
     return Object.keys(data).length === 0
       ? null
@@ -126,7 +136,7 @@ export const gameRepository = {
     return await redisClient.hGet(redisKeys.players(pin), userId);
   },
 
-  async getFullState(pin: string) {
+  async getFullState(pin: string): Promise<GameFullState | null> {
     const meta = await this.getMeta(pin);
     if (!meta) return null;
 
@@ -137,8 +147,8 @@ export const gameRepository = {
     let answers = null;
 
     if (meta.state === "playing") {
-      question = await this.getQuestion(pin, Number(meta.currentQuestion));
-      answers = await this.getAnswers(pin, Number(meta.currentQuestion));
+      question = await this.getQuestion(pin, meta.currentQuestion);
+      answers = await this.getAnswers(pin, meta.currentQuestion);
     }
 
     return {
