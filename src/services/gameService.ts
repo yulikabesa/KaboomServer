@@ -160,7 +160,7 @@ export const gameService = {
     const gameState = await gameRepository.getFullState(pin);
 
     // Format full state for this player
-    let playerView = gameState;
+    let playerView =
     meta.host === userId
       ? gameEngine.buildHostView(gameState)
       : gameEngine.buildPlayerView(gameState, userId);
