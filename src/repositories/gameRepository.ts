@@ -1,6 +1,12 @@
 import { redisClient } from "../db/redis/redis";
 import { redisKeys } from "../db/redis/redisKeys";
-import { GameMeta, GamePhase, GameState, GameFullState, GameQuestion } from "../types/game";
+import {
+  GameMeta,
+  GamePhase,
+  GameState,
+  GameFullState,
+  GameQuestion,
+} from "../types/game";
 
 export const gameRepository = {
   async createMeta(
@@ -130,6 +136,10 @@ export const gameRepository = {
 
   async getConnection(pin: string, userId: string) {
     return await redisClient.hGet(redisKeys.connections(pin), userId);
+  },
+
+  async getConnections(pin: string) {
+    return await redisClient.hGetAll(redisKeys.connections(pin));
   },
 
   async getPlayer(pin: string, userId: string) {

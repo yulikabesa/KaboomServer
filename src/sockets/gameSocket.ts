@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
-import { gameService } from "../services/gameService";
 import { gameRepository } from "../repositories/gameRepository";
+import { gameService } from "../services/gameService";
+import { gameEngine } from "../engine/gameEngine";
 
 const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
@@ -14,6 +15,26 @@ const hostOnly =
     await handler(payload, socket, io);
   };
 
+const emitGameState = async (io: Server, pin: string) => {
+  const state = await gameRepository.getFullState(pin);
+  if (!state) return;
+
+  const players = state.players;
+  const connections = await gameRepository.getConnections(pin);
+
+  for (const playerId of Object.keys(players)) {
+    const socketId = connections[playerId];
+    if (!socketId) continue;
+
+    const view =
+      playerId === state.meta.host
+        ? gameEngine.buildHostView(state)
+        : gameEngine.buildPlayerView(state, playerId);
+
+    io.to(socketId).emit("game-state", view);
+  }
+};
+
 const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
@@ -22,7 +43,6 @@ const handlers = {
 
     // save connection
     await gameRepository.setConnection(game.pin, userId, socket.id);
-    // await gameRepository.setUserGame(userId, game.pin);
     socket.emit("game-created", { pin: game.pin });
   },
 
@@ -42,20 +62,22 @@ const handlers = {
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    const question = await gameService.startGame(payload.pin);
-    io.to(payload.pin).emit("game-state", {
-      phase: "question",
-      data: question,
-    });
+    // const question = await gameService.startGame(payload.pin);
+    // io.to(payload.pin).emit("game-state", {
+    //   phase: "question",
+    //   data: question,
+    // });
+
+    // todo: fix startGame -> void
+    await gameService.startGame(payload.pin);
+    await emitGameState(io, payload.pin); // phase is "question"
   }),
 
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
-    const score = await gameService.submitAnswer(
-      payload.pin,
-      userId,
-      payload.answer,
-    );
+
+    // todo: fix submitAnswer -> void
+    await gameService.submitAnswer(payload.pin, userId, payload.answer);
     socket.emit("answer-received");
 
     const progress = await gameService.getAnswerProgress(payload.pin);
@@ -70,49 +92,64 @@ const handlers = {
     }
 
     if (progress.answered === progress.totalPlayers) {
-      const results = await gameService.endQuestion(payload.pin);
-      io.to(payload.pin).emit("game-state", {
-        phase: "results",
-        data: results,
-      });
+      // const results = await gameService.endQuestion(payload.pin);
+      // io.to(payload.pin).emit("game-state", {
+      //   phase: "results",
+      //   data: results,
+      // });
+
+      // todo: fix endQuestion -> void
+      await gameService.endQuestion(payload.pin);
+      await emitGameState(io, payload.pin); // phase is "results"
     }
   },
 
   "next-question": hostOnly(
     async (payload: any, socket: Socket, io: Server) => {
-      const question = await gameService.nextQuestion(payload.pin);
+      // const question = await gameService.nextQuestion(payload.pin);
 
-      if (!question) {
-        const leaderboard = await gameService.showLeaderboard(payload.pin);
-        io.to(payload.pin).emit("game-state", {
-          phase: "leaderboard",
-          data: leaderboard,
-        });
-        return;
-      }
+      // if (!question) {
+      //   const leaderboard = await gameService.showLeaderboard(payload.pin);
+      //   io.to(payload.pin).emit("game-state", {
+      //     phase: "leaderboard",
+      //     data: leaderboard,
+      //   });
+      //   return;
+      // }
 
-      io.to(payload.pin).emit("game-state", {
-        phase: "question",
-        data: question,
-      });
+      // io.to(payload.pin).emit("game-state", {
+      //   phase: "question",
+      //   data: question,
+      // });
+
+      // todo: fix nextQuestion -> void
+      await gameService.nextQuestion(payload.pin);
+      await emitGameState(io, payload.pin);
     },
   ),
 
   "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    const results = await gameService.endQuestion(payload.pin);
-    io.to(payload.pin).emit("game-state", {
-      phase: "results",
-      data: results,
-    });
+    // const results = await gameService.endQuestion(payload.pin);
+    // io.to(payload.pin).emit("game-state", {
+    //   phase: "results",
+    //   data: results,
+    // });
+
+    await gameService.endQuestion(payload.pin);
+    await emitGameState(io, payload.pin); // phase is "results"
   }),
 
   "show-leaderboard": hostOnly(async (payload, socket, io) => {
-    const leaderboard = await gameService.showLeaderboard(payload.pin);
+    // const leaderboard = await gameService.showLeaderboard(payload.pin);
 
-    io.to(payload.pin).emit("game-state", {
-      phase: "leaderboard",
-      data: leaderboard,
-    });
+    // io.to(payload.pin).emit("game-state", {
+    //   phase: "leaderboard",
+    //   data: leaderboard,
+    // });
+
+    // todo: fix showLeaderboard -> void
+    await gameService.showLeaderboard(payload.pin);
+    await emitGameState(io, payload.pin); // phase is "leaderboard"
   }),
 
   "validate-pin": async (payload: any, socket: Socket) => {
