@@ -19,17 +19,15 @@ const emitGameState = async (io: Server, pin: string) => {
   const state = await gameRepository.getFullState(pin);
   if (!state) return;
 
-  const players = state.players;
   const connections = await gameRepository.getConnections(pin);
 
-  for (const playerId of Object.keys(players)) {
-    const socketId = connections[playerId];
+  for (const [userId, socketId] of Object.entries(connections)) {
     if (!socketId) continue;
 
     const view =
-      playerId === state.meta.host
+      userId === state.meta.host
         ? gameEngine.buildHostView(state)
-        : gameEngine.buildPlayerView(state, playerId);
+        : gameEngine.buildPlayerView(state, userId);
 
     io.to(socketId).emit("game-state", view);
   }
