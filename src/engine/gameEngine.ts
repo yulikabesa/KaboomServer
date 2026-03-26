@@ -77,6 +77,8 @@ export const gameEngine = {
         return {
           phase: "question",
           data: {
+            currentQuestion: meta.currentQuestion,
+            questionCount: meta.questionCount,
             question: question?.question,
             answers: question?.answers,
             timeLimit: question?.timeLimit,
