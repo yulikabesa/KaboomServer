@@ -53,7 +53,7 @@ export const gameEngine = {
           data: {
             isCorrect:
               playerAnswer !== undefined
-                ? question?.correctIndexes.includes(Number(playerAnswer)) // fix
+                ? question?.correctIndexes.includes(Number(playerAnswer)) // todo: fix
                 : null,
           },
         };

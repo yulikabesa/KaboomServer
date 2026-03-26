@@ -46,6 +46,8 @@ export const gameService = {
 
   async submitAnswer(pin: string, playerId: string, answer: number) {
     const meta = await gameRepository.getMetaOrThrow(pin);
+    if (meta.phase !== "question") return;
+
     const qIdx = meta.currentQuestion;
 
     const isNew = await gameRepository.submitAnswer(
@@ -69,6 +71,8 @@ export const gameService = {
 
   async endQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
+    if (meta.phase !== "question") return;
+
     const qIdx = meta.currentQuestion;
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
@@ -87,6 +91,8 @@ export const gameService = {
 
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
+    if (meta.phase !== "question") return;
+    
     const next = meta.currentQuestion + 1;
 
     if (next >= meta.questionCount) {
