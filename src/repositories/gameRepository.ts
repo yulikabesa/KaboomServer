@@ -139,7 +139,12 @@ export const gameRepository = {
   },
 
   async getConnections(pin: string) {
-    return await redisClient.hGetAll(redisKeys.connections(pin));
+    const connections = await redisClient.hGetAll(redisKeys.connections(pin));
+    return Object.keys(connections).length === 0 ? null : connections;
+  },
+
+  async removeConnection(pin: string, userId: string) {
+    await redisClient.hDel(redisKeys.connections(pin), userId);
   },
 
   async getPlayer(pin: string, userId: string) {
