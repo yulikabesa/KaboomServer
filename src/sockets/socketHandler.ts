@@ -1,9 +1,7 @@
-// הקובץ הזה מטפל בחיבור של כל משתמש חדש
-
 import { Server, Socket } from "socket.io";
 import { gameSocket } from "./gameSocket";
-import jwt from "jsonwebtoken";
 import { gameRepository } from "../repositories/gameRepository";
+import jwt from "jsonwebtoken";
 
 function verifyToken(token: string): string {
   const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
@@ -13,15 +11,12 @@ function verifyToken(token: string): string {
 export const initSocket = (io: Server) => {
   // MIDDLEWARE
   io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-
-    if (!token) {
-      return next(new Error("Unauthorized"));
-    }
-
     try {
-      const userId = verifyToken(token); // implement this
-      socket.data.userId = userId; // ✅ attach identity
+      const token = socket.handshake.auth?.token;
+      if (!token) return next(new Error("Unauthorized"));
+
+      const userId = verifyToken(token);
+      socket.data.userId = userId;
       next();
     } catch (err) {
       next(new Error("Unauthorized"));
@@ -30,9 +25,13 @@ export const initSocket = (io: Server) => {
 
   // connection handler
   io.on("connection", async (socket: Socket) => {
-    console.log("User connected:", socket.id);
     const userId = socket.data.userId;
-    console.log("UserId:", userId);
+
+    // If client sent pin in auth (reconnecting), store it
+    // const authPin = socket.handshake.auth?.pin ?? null;
+    // if (authPin) socket.data.pin = authPin;
+
+    console.log(`User connected: ${userId} (socket: ${socket.id})`);
 
     // AUTO REJOIN
     // try {
@@ -49,8 +48,12 @@ export const initSocket = (io: Server) => {
 
     gameSocket(io, socket);
 
-    socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
+    socket.on("disconnect", async () => {
+      console.log(`User disconnected: ${userId} (socket: ${socket.id})`);
+      const pin = socket.data.pin;
+      if (pin) {
+        await gameRepository.removeConnection(pin, userId);
+      }
     });
   });
 };
