@@ -62,12 +62,6 @@ const handlers = {
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    // const question = await gameService.startGame(payload.pin);
-    // io.to(payload.pin).emit("game-state", {
-    //   phase: "question",
-    //   data: question,
-    // });
-
     // todo: fix startGame -> void
     await gameService.startGame(payload.pin);
     await emitGameState(io, payload.pin); // phase is "question"
@@ -92,12 +86,6 @@ const handlers = {
     }
 
     if (progress.answered === progress.totalPlayers) {
-      // const results = await gameService.endQuestion(payload.pin);
-      // io.to(payload.pin).emit("game-state", {
-      //   phase: "results",
-      //   data: results,
-      // });
-
       // todo: fix endQuestion -> void
       await gameService.endQuestion(payload.pin);
       await emitGameState(io, payload.pin); // phase is "results"
@@ -106,22 +94,6 @@ const handlers = {
 
   "next-question": hostOnly(
     async (payload: any, socket: Socket, io: Server) => {
-      // const question = await gameService.nextQuestion(payload.pin);
-
-      // if (!question) {
-      //   const leaderboard = await gameService.showLeaderboard(payload.pin);
-      //   io.to(payload.pin).emit("game-state", {
-      //     phase: "leaderboard",
-      //     data: leaderboard,
-      //   });
-      //   return;
-      // }
-
-      // io.to(payload.pin).emit("game-state", {
-      //   phase: "question",
-      //   data: question,
-      // });
-
       // todo: fix nextQuestion -> void
       await gameService.nextQuestion(payload.pin);
       await emitGameState(io, payload.pin);
@@ -129,24 +101,11 @@ const handlers = {
   ),
 
   "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    // const results = await gameService.endQuestion(payload.pin);
-    // io.to(payload.pin).emit("game-state", {
-    //   phase: "results",
-    //   data: results,
-    // });
-
     await gameService.endQuestion(payload.pin);
     await emitGameState(io, payload.pin); // phase is "results"
   }),
 
   "show-leaderboard": hostOnly(async (payload, socket, io) => {
-    // const leaderboard = await gameService.showLeaderboard(payload.pin);
-
-    // io.to(payload.pin).emit("game-state", {
-    //   phase: "leaderboard",
-    //   data: leaderboard,
-    // });
-
     // todo: fix showLeaderboard -> void
     await gameService.showLeaderboard(payload.pin);
     await emitGameState(io, payload.pin); // phase is "leaderboard"
