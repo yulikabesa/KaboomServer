@@ -19,7 +19,7 @@ const emitGameState = async (io: Server, pin: string) => {
   const state = await gameRepository.getFullState(pin);
   if (!state) return;
 
-  const connections = await gameRepository.getConnections(pin);
+  const connections = (await gameRepository.getConnections(pin)) || {};
 
   for (const [userId, socketId] of Object.entries(connections)) {
     if (!socketId) continue;
@@ -38,6 +38,7 @@ const handlers = {
     const userId = socket.data.userId;
     const game = await gameService.createGameSession(payload.quizId, userId);
     socket.join(game.pin);
+    socket.data.pin = game.pin;
 
     // save connection
     await gameRepository.setConnection(game.pin, userId, socket.id);
@@ -56,6 +57,7 @@ const handlers = {
     await gameRepository.setConnection(payload.pin, userId, socket.id);
 
     socket.join(payload.pin);
+    socket.data.pin = payload.pin;
     io.to(payload.pin).emit("player-joined", player);
   },
 
@@ -165,6 +167,7 @@ const handlers = {
     }
 
     socket.join(payload.pin);
+    socket.data.pin = payload.pin;
     socket.emit("game-state", data.state);
   },
 };
