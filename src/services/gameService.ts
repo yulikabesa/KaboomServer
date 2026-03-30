@@ -70,8 +70,8 @@ export const gameService = {
 
     const qIdx = meta.currentQuestion;
 
-    const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
+    // const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
+    // const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
 
     await gameRepository.setMeta(pin, { phase: "results" });
   },
@@ -145,12 +145,12 @@ export const gameService = {
     }
 
     // format full state for this player
-    let gameView =
+    const gameView =
       meta.host === userId
         ? gameEngine.buildHostView(gameState)
         : gameEngine.buildSharedPlayerView(gameState);
 
-    let playerView =
+    const playerView =
       meta.host === userId
         ? null
         : gameEngine.buildPersonalPlayerView(gameState, userId);

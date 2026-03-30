@@ -3,12 +3,6 @@ import jwt from "jsonwebtoken";
 import { gameSocket } from "./gameSocket";
 import { gameService } from "../services/gameService";
 
-type UserState = {
-  pin: string | null;
-  connected: boolean;
-  disconnectTimer?: NodeJS.Timeout;
-};
-
 function verifyToken(token: string): string {
   const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
@@ -61,7 +55,6 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
 
 function handleDisconnect(io: Server, socket: Socket) {
   const userId: string = socket.data.userId;
-  // const pin: string | null = socket.data.pin;
 
   if (!userId) return;
   
