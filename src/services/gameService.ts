@@ -39,9 +39,6 @@ export const gameService = {
       currentQuestion: 0,
       phase: "question",
     });
-
-    const q = await gameRepository.getQuestion(pin, 0);
-    return q ? gameEngine.formatQuestion(q) : null;
   },
 
   async submitAnswer(pin: string, playerId: string, answer: number) {
@@ -65,8 +62,6 @@ export const gameService = {
     if (score > 0) {
       await gameRepository.incrementScore(pin, playerId, score);
     }
-
-    return score;
   },
 
   async endQuestion(pin: string) {
@@ -79,20 +74,12 @@ export const gameService = {
     const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
 
     await gameRepository.setMeta(pin, { phase: "results" });
-
-    return {
-      correctAnswers: question.correctIndexes,
-      distribution: gameEngine.buildDistribution(
-        answers,
-        question.answers.length,
-      ),
-    };
   },
 
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "question") return;
-    
+
     const next = meta.currentQuestion + 1;
 
     if (next >= meta.questionCount) {
@@ -107,9 +94,6 @@ export const gameService = {
       currentQuestion: next,
       phase: "question",
     });
-
-    const q = await gameRepository.getQuestion(pin, next);
-    return q ? gameEngine.formatQuestion(q) : null;
   },
 
   async getAnswerProgress(pin: string) {
@@ -127,11 +111,6 @@ export const gameService = {
     await gameRepository.setMeta(pin, {
       phase: "leaderboard",
     });
-
-    const leaderboard = await gameRepository.getLeaderboard(pin);
-    const players = (await gameRepository.getPlayers(pin)) || {};
-
-    return gameEngine.mapLeaderboard(leaderboard, players);
   },
 
   async isHost(pin: string, userId: string) {
@@ -147,36 +126,39 @@ export const gameService = {
     const meta = await gameRepository.getMeta(pin);
     if (!meta) {
       return { success: false, error: "Invalid pin" };
-    } else if (meta.state !== "lobby") {
-      return { success: false, error: "Game in progress" };
+    } else if (meta.state === "finished") {
+      return { success: false, error: "Game has ended" };
     } else {
       return { success: true, error: null };
     }
   },
 
-  async reconnect(pin: string, userId: string, socketId: string) {
+  async handleReconnect(pin: string, userId: string) {
     const meta = await gameRepository.getMeta(pin);
-    if (!meta) return { success: false, error: "Game not found" };
-
     const player = await gameRepository.getPlayer(pin, userId);
-    if (!player) return { success: false, error: "Not in game" };
-
-    await gameRepository.setConnection(pin, userId, socketId);
+    if (!meta || !player)
+      return { success: false, error: "Invalid game access" };
 
     const gameState = await gameRepository.getFullState(pin);
     if (!gameState) {
-      return { success: false, error: "Game not found" };
+      return { success: false, error: "Failed to find game" };
     }
 
-    // Format full state for this player
-    let playerView =
+    // format full state for this player
+    let gameView =
       meta.host === userId
         ? gameEngine.buildHostView(gameState)
-        : gameEngine.buildPlayerView(gameState, userId);
+        : gameEngine.buildSharedPlayerView(gameState);
+
+    let playerView =
+      meta.host === userId
+        ? null
+        : gameEngine.buildPersonalPlayerView(gameState, userId);
 
     return {
       success: true,
-      state: playerView,
+      gameState: gameView,
+      playerState: playerView,
     };
   },
 };

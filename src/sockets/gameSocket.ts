@@ -15,33 +15,35 @@ const hostOnly =
     await handler(payload, socket, io);
   };
 
-const emitGameState = async (io: Server, pin: string) => {
+export const emitGameState = async (io: Server, pin: string) => {
   const state = await gameRepository.getFullState(pin);
   if (!state) return;
 
-  const connections = (await gameRepository.getConnections(pin)) || {};
+  const hostId = state.meta.host;
 
-  for (const [userId, socketId] of Object.entries(connections)) {
-    if (!socketId) continue;
+  const sharedView = gameEngine.buildSharedPlayerView(state);
+  io.to(`game:${pin}`).emit("game-state", sharedView);
 
-    const view =
-      userId === state.meta.host
-        ? gameEngine.buildHostView(state)
-        : gameEngine.buildPlayerView(state, userId);
+  for (const userId of Object.keys(state.players)) {
+    if (userId === hostId) continue;
 
-    io.to(socketId).emit("game-state", view);
+    const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+    io.to(`user:${userId}`).emit("player-state", personalView);
   }
+
+  // Host view
+  const hostView = gameEngine.buildHostView(state);
+  io.to(`user:${hostId}`).emit("game-state", hostView);
 };
 
 const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
     const game = await gameService.createGameSession(payload.quizId, userId);
-    socket.join(game.pin);
+    socket.join(`game:${game.pin}`);
     socket.data.pin = game.pin;
 
     // save connection
-    await gameRepository.setConnection(game.pin, userId, socket.id);
     socket.emit("game-created", { pin: game.pin });
   },
 
@@ -53,16 +55,12 @@ const handlers = {
       payload.nickname,
     );
 
-    // map user → socket
-    await gameRepository.setConnection(payload.pin, userId, socket.id);
-
-    socket.join(payload.pin);
+    socket.join(`game:${payload.pin}`);
     socket.data.pin = payload.pin;
-    io.to(payload.pin).emit("player-joined", player);
+    io.to(`game:${payload.pin}`).emit("player-joined", player);
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    // todo: fix startGame -> void
     await gameService.startGame(payload.pin);
     await emitGameState(io, payload.pin); // phase is "question"
   }),
@@ -70,23 +68,14 @@ const handlers = {
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
 
-    // todo: fix submitAnswer -> void
     await gameService.submitAnswer(payload.pin, userId, payload.answer);
     socket.emit("answer-received");
 
     const progress = await gameService.getAnswerProgress(payload.pin);
     const hostUserId = await gameService.getHost(payload.pin);
-    const hostSocketId = await gameRepository.getConnection(
-      payload.pin,
-      hostUserId!,
-    );
-
-    if (hostSocketId) {
-      io.to(hostSocketId).emit("answer-progress", progress.answered);
-    }
+    io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
 
     if (progress.answered === progress.totalPlayers) {
-      // todo: fix endQuestion -> void
       await gameService.endQuestion(payload.pin);
       await emitGameState(io, payload.pin); // phase is "results"
     }
@@ -94,7 +83,6 @@ const handlers = {
 
   "next-question": hostOnly(
     async (payload: any, socket: Socket, io: Server) => {
-      // todo: fix nextQuestion -> void
       await gameService.nextQuestion(payload.pin);
       await emitGameState(io, payload.pin);
     },
@@ -106,7 +94,6 @@ const handlers = {
   }),
 
   "show-leaderboard": hostOnly(async (payload, socket, io) => {
-    // todo: fix showLeaderboard -> void
     await gameService.showLeaderboard(payload.pin);
     await emitGameState(io, payload.pin); // phase is "leaderboard"
   }),
@@ -116,19 +103,19 @@ const handlers = {
     socket.emit(data.success ? "pin-valid" : "pin-error", data.error);
   },
 
-  "rejoin-game": async (payload: any, socket: Socket) => {
-    const userId = socket.data.userId;
-    const data = await gameService.reconnect(payload.pin, userId, socket.id);
+  // "rejoin-game": async (payload: any, socket: Socket) => {
+  //   const userId = socket.data.userId;
+  //   const data = await gameService.handleReconnect(payload.pin, userId, socket.id);
 
-    if (!data.success) {
-      socket.emit("rejoin-error", data.error);
-      return;
-    }
+  //   if (!data.success) {
+  //     socket.emit("rejoin-error", data.error);
+  //     return;
+  //   }
 
-    socket.join(payload.pin);
-    socket.data.pin = payload.pin;
-    socket.emit("game-state", data.state);
-  },
+  //   socket.join(`game:${payload.pin}`);
+  //   socket.data.pin = payload.pin;
+  //   socket.emit("game-state", data.state);
+  // },
 };
 
 type HandlerKeys = keyof typeof handlers;
@@ -147,8 +134,3 @@ export const gameSocket = (io: Server, socket: Socket) => {
     }
   });
 };
-
-// later in order to send if player was right or wrong to the specific player
-// will need to do:
-// const socketId = await gameRepository.getConnection(pin, userId);
-// io.to(socketId!).emit("answer-result", { correct: true });

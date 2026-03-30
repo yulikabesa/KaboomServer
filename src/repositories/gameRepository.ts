@@ -130,23 +130,6 @@ export const gameRepository = {
     return question;
   },
 
-  async setConnection(pin: string, userId: string, socketId: string) {
-    await redisClient.hSet(redisKeys.connections(pin), userId, socketId);
-  },
-
-  async getConnection(pin: string, userId: string) {
-    return await redisClient.hGet(redisKeys.connections(pin), userId);
-  },
-
-  async getConnections(pin: string) {
-    const connections = await redisClient.hGetAll(redisKeys.connections(pin));
-    return Object.keys(connections).length === 0 ? null : connections;
-  },
-
-  async removeConnection(pin: string, userId: string) {
-    await redisClient.hDel(redisKeys.connections(pin), userId);
-  },
-
   async getPlayer(pin: string, userId: string) {
     return await redisClient.hGet(redisKeys.players(pin), userId);
   },

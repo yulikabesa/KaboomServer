@@ -33,35 +33,54 @@ export const gameEngine = {
     }));
   },
 
-  buildPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, players, leaderboard, question, answers } = gameState;
+  // Build the view that all players in a game can see
+  buildSharedPlayerView(gameState: GameFullState) {
+    const { meta, players, leaderboard, question } = gameState;
+
+    switch (meta.phase) {
+      case "question": //todo: replace to answers
+        return {
+          phase: meta.phase,
+          data: {
+            answers: question?.answers,
+          },
+        };
+
+      case "leaderboard":
+        return {
+          phase: meta.phase,
+          data: this.mapLeaderboard(leaderboard, players),
+        };
+
+      default:
+        return { phase: meta.phase, data: {} };
+    }
+  },
+
+  // Build the view for a single player (personal info)
+  buildPersonalPlayerView(gameState: GameFullState, userId: string) {
+    const { meta, question, answers } = gameState;
     const playerAnswer = answers?.[userId];
 
     switch (meta.phase) {
       case "question":
         return {
-          phase: "question",
+          phase: meta.phase,
           data: {
-            question: question?.question,
             hasAnswered: playerAnswer !== undefined,
           },
         };
 
       case "results":
         return {
-          phase: "results",
+          phase: meta.phase,
           data: {
             isCorrect:
               playerAnswer !== undefined
                 ? question?.correctIndexes.includes(Number(playerAnswer)) // todo: fix
                 : null,
+            // todo: score
           },
-        };
-
-      case "leaderboard":
-        return {
-          phase: "leaderboard",
-          data: this.mapLeaderboard(leaderboard, players),
         };
 
       default:
@@ -75,11 +94,21 @@ export const gameEngine = {
     switch (meta.phase) {
       case "question":
         return {
-          phase: "question",
+          phase: meta.phase,
           data: {
             currentQuestion: meta.currentQuestion,
             questionCount: meta.questionCount,
             question: question?.question,
+            answers: question?.answers, // todo: remove
+            timeLimit: question?.timeLimit, // todo: remove
+            answeredCount: answers ? Object.keys(answers).length : 0, // todo: remove
+          },
+        };
+
+      case "answers":
+        return {
+          phase: meta.phase,
+          data: {
             answers: question?.answers,
             timeLimit: question?.timeLimit,
             answeredCount: answers ? Object.keys(answers).length : 0,
@@ -88,7 +117,7 @@ export const gameEngine = {
 
       case "results":
         return {
-          phase: "results",
+          phase: meta.phase,
           data: {
             answers: answers,
             correctAnswers: question?.correctIndexes,
@@ -101,7 +130,7 @@ export const gameEngine = {
 
       case "leaderboard":
         return {
-          phase: "leaderboard",
+          phase: meta.phase,
           data: this.mapLeaderboard(leaderboard, players),
         };
 

@@ -1,6 +1,6 @@
 export type GameState = "lobby" | "playing" | "finished";
 
-export type GamePhase = "lobby" | "question" | "results" | "leaderboard";
+export type GamePhase = "lobby" | "question" | "answers" | "results" | "leaderboard";
 
 export interface GameMeta {
   quizId: string;
