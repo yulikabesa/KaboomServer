@@ -8,7 +8,10 @@ const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
   async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
-    const isHost = await gameService.isHost(payload.pin ?? socket.data.pin, userId);
+    const isHost = await gameService.isHost(
+      payload.pin ?? socket.data.pin,
+      userId,
+    );
     if (!isHost) {
       socket.emit("error", "Only host can perform this action");
       return;
@@ -59,7 +62,9 @@ const handlers = {
     socket.join(`game:${payload.pin}`);
     socket.data.pin = payload.pin;
 
-    io.to(`game:${payload.pin}`).emit("player-joined", player);
+    const hostId = await gameRepository.getHost(payload.pin);
+    io.to(`user:${hostId}`).emit("player-joined", player);
+    socket.emit("game-state", { phase: "lobby", data: {} });
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
