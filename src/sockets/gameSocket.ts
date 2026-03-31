@@ -3,11 +3,12 @@ import { gameRepository } from "../repositories/gameRepository";
 import { gameService } from "../services/gameService";
 import { gameEngine } from "../engine/gameEngine";
 
+// todo: decide -> payload.pin / socket.data.pin
 const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
   async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
-    const isHost = await gameService.isHost(payload.pin, userId);
+    const isHost = await gameService.isHost(payload.pin ?? socket.data.pin, userId);
     if (!isHost) {
       socket.emit("error", "Only host can perform this action");
       return;
@@ -22,7 +23,7 @@ export const emitGameState = async (io: Server, pin: string) => {
   const hostId = state.meta.host;
 
   const sharedView = gameEngine.buildSharedPlayerView(state);
-  io.to(`game:${pin}`).emit("game-state", sharedView);
+  io.to(`game:${pin}`).except(`user:${hostId}`).emit("game-state", sharedView);
 
   for (const userId of Object.keys(state.players)) {
     if (userId === hostId) continue;
@@ -40,7 +41,7 @@ const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
     const game = await gameService.createGameSession(payload.quizId, userId);
-    // socket.join(`game:${game.pin}`);
+    socket.join(`game:${game.pin}`);
     socket.data.pin = game.pin;
 
     // save connection
@@ -58,14 +59,18 @@ const handlers = {
     socket.join(`game:${payload.pin}`);
     socket.data.pin = payload.pin;
 
-    const host = await gameRepository.getHost(payload.pin);
-    io.to(`user:${host}`).to(`game:${payload.pin}`).emit("player-joined", player);
+    io.to(`game:${payload.pin}`).emit("player-joined", player);
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     await gameService.startGame(payload.pin);
     await emitGameState(io, payload.pin); // phase is "question"
   }),
+
+  "reveal-answers": async (payload: any, socket: Socket, io: Server) => {
+    await gameService.revealAnswers(socket.data.pin);
+    await emitGameState(io, socket.data.pin); // phase is "answers"
+  },
 
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;

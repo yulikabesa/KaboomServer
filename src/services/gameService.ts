@@ -41,9 +41,18 @@ export const gameService = {
     });
   },
 
-  async submitAnswer(pin: string, playerId: string, answer: number) {
+  async revealAnswers(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "question") return;
+
+    await gameRepository.setMeta(pin, {
+      phase: "answers",
+    });
+  },
+
+  async submitAnswer(pin: string, playerId: string, answer: number) {
+    const meta = await gameRepository.getMetaOrThrow(pin);
+    if (meta.phase !== "answers") return;
 
     const qIdx = meta.currentQuestion;
 
@@ -78,7 +87,6 @@ export const gameService = {
 
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    if (meta.phase !== "question") return;
 
     const next = meta.currentQuestion + 1;
 
@@ -135,7 +143,11 @@ export const gameService = {
 
   async handleReconnect(pin: string, userId: string) {
     const meta = await gameRepository.getMeta(pin);
-    const player = await gameRepository.getPlayer(pin, userId);
+    // todo: fix to a nice solution
+    const player =
+      userId === meta?.host
+        ? meta.host
+        : await gameRepository.getPlayer(pin, userId);
     if (!meta || !player)
       return { success: false, error: "Invalid game access" };
 

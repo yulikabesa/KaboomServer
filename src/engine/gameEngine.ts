@@ -38,7 +38,7 @@ export const gameEngine = {
     const { meta, players, leaderboard, question } = gameState;
 
     switch (meta.phase) {
-      case "question": //todo: replace to answers
+      case "answers":
         return {
           phase: meta.phase,
           data: {
@@ -63,13 +63,13 @@ export const gameEngine = {
     const playerAnswer = answers?.[userId];
 
     switch (meta.phase) {
-      case "question":
+      case "answers":
         return {
           phase: meta.phase,
           data: {
             hasAnswered: playerAnswer !== undefined,
           },
-        };
+        }; // todo: add another phase
 
       case "results":
         return {
@@ -99,9 +99,6 @@ export const gameEngine = {
             currentQuestion: meta.currentQuestion,
             questionCount: meta.questionCount,
             question: question?.question,
-            answers: question?.answers, // todo: remove
-            timeLimit: question?.timeLimit, // todo: remove
-            answeredCount: answers ? Object.keys(answers).length : 0, // todo: remove
           },
         };
 
@@ -109,6 +106,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
+            question: question?.question,
             answers: question?.answers,
             timeLimit: question?.timeLimit,
             answeredCount: answers ? Object.keys(answers).length : 0,

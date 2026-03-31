@@ -44,20 +44,15 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
   socket.join(`game:${pin}`);
 
   // Restore state
-  socket.emit("game-state", {
-    gameState,
-  });
-
-  socket.emit("player-state", {
-    playerState,
-  });
+  socket.emit("game-state", gameState);
+  socket.emit("player-state", playerState);
 };
 
 function handleDisconnect(io: Server, socket: Socket) {
   const userId: string = socket.data.userId;
 
   if (!userId) return;
-  
+
   console.log(`User disconnected: ${userId}`);
 }
 
