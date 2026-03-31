@@ -40,7 +40,7 @@ const handlers = {
   "create-game-session": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
     const game = await gameService.createGameSession(payload.quizId, userId);
-    socket.join(`game:${game.pin}`);
+    // socket.join(`game:${game.pin}`);
     socket.data.pin = game.pin;
 
     // save connection
@@ -57,7 +57,9 @@ const handlers = {
 
     socket.join(`game:${payload.pin}`);
     socket.data.pin = payload.pin;
-    io.to(`game:${payload.pin}`).emit("player-joined", player);
+
+    const host = await gameRepository.getHost(payload.pin);
+    io.to(`user:${host}`).emit("player-joined", player);
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
