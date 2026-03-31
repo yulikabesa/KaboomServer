@@ -70,7 +70,7 @@ export const gameRepository = {
     return await redisClient.zRangeWithScores(
       redisKeys.leaderboard(pin),
       0,
-      -1,
+      5,
       { REV: true },
     );
   },

@@ -27,7 +27,6 @@ export const gameEngine = {
 
   mapLeaderboard(leaderboard: any[], players: any) {
     return leaderboard.map((p) => ({
-      playerId: p.value,
       nickname: players[p.value],
       score: p.score,
     }));
