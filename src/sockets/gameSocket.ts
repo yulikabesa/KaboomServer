@@ -59,7 +59,7 @@ const handlers = {
     socket.data.pin = payload.pin;
 
     const host = await gameRepository.getHost(payload.pin);
-    io.to(`user:${host}`).emit("player-joined", player);
+    io.to(`user:${host}`).to(`game:${payload.pin}`).emit("player-joined", player);
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
