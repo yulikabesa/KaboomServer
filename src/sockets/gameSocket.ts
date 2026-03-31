@@ -63,7 +63,8 @@ const handlers = {
     socket.data.pin = payload.pin;
 
     const hostId = await gameRepository.getHost(payload.pin);
-    io.to(`user:${hostId}`).emit("player-joined", player);
+    // io.to(`user:${hostId}`).emit("player-joined", player);
+    io.to(`game:${payload.pin}`).emit("player-joined", player);
     socket.emit("game-state", { phase: "lobby", data: {} });
   },
 
