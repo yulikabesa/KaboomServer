@@ -117,15 +117,13 @@ export const gameRepository = {
 
   async getAnswers(pin: string, qIdx: number) {
     const answers = await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
-
     if (Object.keys(answers).length === 0) return null;
 
-    const answersFormat: Record<string, UserAnswer> = Object.fromEntries(
-      Object.entries(answers).map(([userId, val]) => [
-        userId,
-        JSON.parse(val) as UserAnswer,
-      ]),
-    );
+    const answersFormat: Record<string, UserAnswer> = {};
+    for (const [userId, val] of Object.entries(answers)) {
+      answersFormat[userId] = JSON.parse(val);
+    }
+
     return answersFormat;
   },
 
