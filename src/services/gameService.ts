@@ -50,7 +50,7 @@ export const gameService = {
     });
   },
 
-  async submitAnswer(pin: string, playerId: string, answer: number) {
+  async submitAnswer(pin: string, playerId: string, answer: number[]) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "answers") return;
 

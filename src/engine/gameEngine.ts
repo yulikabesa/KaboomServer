@@ -1,4 +1,4 @@
-import { GameFullState, GameQuestion } from "../types/game";
+import { GameFullState, GameQuestion, UserAnswer } from "../types/game";
 
 export const gameEngine = {
   formatQuestion(q: GameQuestion) {
@@ -9,17 +9,28 @@ export const gameEngine = {
     };
   },
 
-  calculateScore(correctIndexes: number[], answer: number) {
-    if (correctIndexes.includes(answer)) {
+  isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
+    const correctSet = new Set(correctIndexes);
+    return (
+      playerAnswer.length === correctSet.size &&
+      playerAnswer.every((i) => correctSet.has(i))
+    );
+  },
+
+  calculateScore(correctIndexes: number[], playerAnswer: number[]) {
+    if (this.isAnswerCorrect(correctIndexes, playerAnswer)) {
       return 1000;
     }
     return 0;
   },
 
-  buildDistribution(answers: Record<string, string>, answerCount: number) {
+  buildDistribution(answers: Record<string, UserAnswer>, answerCount: number) {
     const counts = new Array(answerCount).fill(0);
+
     for (const answer of Object.values(answers)) {
-      counts[Number(answer)]++;
+      for (const index of answer.indexes) {
+        counts[index]++;
+      }
     }
 
     return counts;
@@ -68,7 +79,7 @@ export const gameEngine = {
           data: {
             hasAnswered: playerAnswer !== undefined,
           },
-        }; // todo: add another phase
+        }; // todo: change this phase to a new phase
 
       case "results":
         return {
@@ -76,7 +87,10 @@ export const gameEngine = {
           data: {
             isCorrect:
               playerAnswer !== undefined
-                ? question?.correctIndexes.includes(Number(playerAnswer)) // todo: fix
+                ? this.isAnswerCorrect(
+                    question!.correctIndexes,
+                    playerAnswer.indexes,
+                  )
                 : null,
             // todo: score
           },

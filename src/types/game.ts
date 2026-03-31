@@ -1,6 +1,16 @@
 export type GameState = "lobby" | "playing" | "finished";
 
-export type GamePhase = "lobby" | "question" | "answers" | "results" | "leaderboard";
+export type GamePhase =
+  | "lobby"
+  | "question"
+  | "answers"
+  | "results"
+  | "leaderboard";
+
+export interface UserAnswer {
+  indexes: number[];
+  answeredAt: number; // Unix timestamp in ms
+}
 
 export interface GameMeta {
   quizId: string;
@@ -23,5 +33,5 @@ export interface GameFullState {
   players: Record<string, string>;
   leaderboard: { value: string; score: number }[];
   question: GameQuestion | null;
-  answers: Record<string, string> | null;
+  answers: Record<string, UserAnswer> | null;
 }

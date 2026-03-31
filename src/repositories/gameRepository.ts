@@ -6,6 +6,7 @@ import {
   GameState,
   GameFullState,
   GameQuestion,
+  UserAnswer,
 } from "../types/game";
 
 export const gameRepository = {
@@ -100,18 +101,32 @@ export const gameRepository = {
     pin: string,
     qIdx: number,
     playerId: string,
-    answer: number,
+    indexes: number[],
   ) {
+    const answer: UserAnswer = {
+      indexes: [0, 2, 3],
+      answeredAt: Date.now(),
+    };
+
     return await redisClient.hSetNX(
       redisKeys.answers(pin, qIdx),
       playerId,
-      answer.toString(),
+      JSON.stringify(answer),
     );
   },
 
   async getAnswers(pin: string, qIdx: number) {
     const answers = await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
-    return Object.keys(answers).length === 0 ? null : answers;
+
+    if (Object.keys(answers).length === 0) return null;
+
+    const answersFormat: Record<string, UserAnswer> = Object.fromEntries(
+      Object.entries(answers).map(([userId, val]) => [
+        userId,
+        JSON.parse(val) as UserAnswer,
+      ]),
+    );
+    return answersFormat;
   },
 
   async getAnswerCount(pin: string, qIdx: number) {
