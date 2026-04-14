@@ -104,7 +104,7 @@ export const gameRepository = {
     indexes: number[],
   ) {
     const answer: UserAnswer = {
-      indexes: [0, 2, 3],
+      indexes,
       answeredAt: Date.now(),
     };
 
