@@ -83,7 +83,7 @@ const handlers = {
     const userId = socket.data.userId;
 
     await gameService.submitAnswer(payload.pin, userId, payload.answer);
-    socket.emit("answer-received");
+    // socket.emit("answer-received");
 
     const progress = await gameService.getAnswerProgress(payload.pin);
     const hostUserId = await gameService.getHost(payload.pin);

@@ -7,6 +7,7 @@ import {
   GameFullState,
   GameQuestion,
   UserAnswer,
+  Player,
 } from "../types/game";
 
 export const gameRepository = {
@@ -49,7 +50,16 @@ export const gameRepository = {
   },
 
   async addPlayer(pin: string, userId: string, nickname: string) {
-    await redisClient.hSet(redisKeys.players(pin), userId, nickname);
+    const player = {
+      nickname,
+      oldRank: null,
+    };
+
+    await redisClient.hSet(
+      redisKeys.players(pin),
+      userId,
+      JSON.stringify(player),
+    );
   },
 
   async getPlayers(pin: string) {
@@ -64,7 +74,13 @@ export const gameRepository = {
   },
 
   async incrementScore(pin: string, playerId: string, score: number) {
+    const oldRank = await redisClient.zRevRank(
+      redisKeys.leaderboard(pin),
+      playerId,
+    );
+
     await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, playerId);
+    await this.updateRank(pin, playerId, oldRank);
   },
 
   async getLeaderboard(pin: string) {
@@ -145,6 +161,19 @@ export const gameRepository = {
 
   async getPlayer(pin: string, userId: string) {
     return await redisClient.hGet(redisKeys.players(pin), userId);
+  },
+
+  async updateRank(pin: string, userId: string, oldRank: number | null) {
+    const player = await this.getPlayer(pin, userId);
+    if (player) {
+      const parsedPlayer = JSON.parse(player) as Player;
+      parsedPlayer.oldRank = oldRank;
+      await redisClient.hSet(
+        redisKeys.players(pin),
+        userId,
+        JSON.stringify(parsedPlayer),
+      );
+    }
   },
 
   async getFullState(pin: string): Promise<GameFullState | null> {

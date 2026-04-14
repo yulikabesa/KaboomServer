@@ -12,6 +12,11 @@ export interface UserAnswer {
   answeredAt: number; // Unix timestamp in ms
 }
 
+export interface Player {
+  nickname: string;
+  oldRank: number | null;
+}
+
 export interface GameMeta {
   quizId: string;
   host: string;
