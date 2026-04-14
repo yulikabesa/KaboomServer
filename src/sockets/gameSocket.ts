@@ -28,11 +28,13 @@ export const emitGameState = async (io: Server, pin: string) => {
   const sharedView = gameEngine.buildSharedPlayerView(state);
   io.to(`game:${pin}`).except(`user:${hostId}`).emit("game-state", sharedView);
 
-  for (const userId of Object.keys(state.players)) {
-    if (userId === hostId) continue;
+  if (state.meta.phase === "results") {
+    for (const userId of Object.keys(state.players)) {
+      if (userId === hostId) continue;
 
-    const personalView = gameEngine.buildPersonalPlayerView(state, userId);
-    io.to(`user:${userId}`).emit("player-state", personalView);
+      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      io.to(`user:${userId}`).emit("game-state", personalView);
+    }
   }
 
   // Host view
@@ -86,6 +88,12 @@ const handlers = {
     const progress = await gameService.getAnswerProgress(payload.pin);
     const hostUserId = await gameService.getHost(payload.pin);
     io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
+
+    const state = await gameRepository.getFullState(payload.pin);
+    if (state) {
+      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      io.to(`user:${userId}`).emit("game-state", personalView);
+    }
 
     if (progress.answered === progress.totalPlayers) {
       await gameService.endQuestion(payload.pin);

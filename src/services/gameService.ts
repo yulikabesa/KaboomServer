@@ -75,9 +75,9 @@ export const gameService = {
 
   async endQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    if (meta.phase !== "question") return;
+    if (meta.phase !== "answers") return;
 
-    const qIdx = meta.currentQuestion;
+    // const qIdx = meta.currentQuestion;
 
     // const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
     // const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};

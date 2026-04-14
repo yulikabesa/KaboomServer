@@ -63,7 +63,7 @@ export const gameEngine = {
         };
 
       default:
-        return { phase: meta.phase, data: {} };
+        return { phase: meta.phase, data: null };
     }
   },
 
@@ -79,7 +79,7 @@ export const gameEngine = {
           data: {
             hasAnswered: playerAnswer !== undefined,
           },
-        }; // todo: change this phase to a new phase
+        };
 
       case "results":
         return {
@@ -91,13 +91,13 @@ export const gameEngine = {
                     question!.correctIndexes,
                     playerAnswer.indexes,
                   )
-                : null,
+                : false, // no answer
             // todo: score
           },
         };
 
       default:
-        return { phase: meta.phase, data: {} };
+        return { phase: meta.phase, data: null };
     }
   },
 
@@ -146,7 +146,7 @@ export const gameEngine = {
         };
 
       default:
-        return { phase: meta.phase, data: {} };
+        return { phase: meta.phase, data: null };
     }
   },
 };
