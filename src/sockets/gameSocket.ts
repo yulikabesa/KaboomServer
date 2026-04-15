@@ -26,9 +26,11 @@ export const emitGameState = async (io: Server, pin: string) => {
   const hostId = state.meta.host;
 
   const sharedView = gameEngine.buildSharedPlayerView(state);
-  io.to(`game:${pin}`).except(`user:${hostId}`).emit("game-state", sharedView);
-
-  if (state.meta.phase === "results" || state.meta.phase === "leaderboard") {
+  if (sharedView.data) {
+    io.to(`game:${pin}`)
+      .except(`user:${hostId}`)
+      .emit("game-state", sharedView);
+  } else {
     for (const userId of Object.keys(state.players)) {
       if (userId === hostId) continue;
 
