@@ -1,14 +1,6 @@
 import { GameFullState, GameQuestion, Player, UserAnswer } from "../types/game";
 
 export const gameEngine = {
-  formatQuestion(q: GameQuestion) {
-    return {
-      question: q.question,
-      answers: q.answers,
-      timeLimit: q.timeLimit,
-    };
-  },
-
   isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
     const correctSet = new Set(correctIndexes);
     return (
@@ -63,7 +55,7 @@ export const gameEngine = {
 
   // Build the view for a single player (personal info)
   buildPersonalPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, question, answers } = gameState;
+    const { meta, question, players, answers } = gameState;
     const playerAnswer = answers?.[userId];
 
     switch (meta.phase) {
@@ -86,6 +78,7 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
+            currentRank: players[userId].currentRank,
             // todo: score
           },
         };
@@ -101,7 +94,7 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            // todo: score
+            currentRank: players[userId].currentRank,
           },
         };
 

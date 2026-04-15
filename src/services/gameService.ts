@@ -77,11 +77,6 @@ export const gameService = {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "answers") return;
 
-    // const qIdx = meta.currentQuestion;
-
-    // const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    // const answers = (await gameRepository.getAnswers(pin, qIdx)) || {};
-
     await gameRepository.setMeta(pin, { phase: "results" });
   },
 

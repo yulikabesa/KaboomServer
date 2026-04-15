@@ -53,6 +53,7 @@ export const gameRepository = {
     const player = {
       nickname,
       oldRank: null,
+      currentRank: null,
     };
 
     await redisClient.hSet(
@@ -75,7 +76,13 @@ export const gameRepository = {
     );
 
     await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, playerId);
-    await this.updateRank(pin, playerId, oldRank);
+
+    const currentRank = await redisClient.zRevRank(
+      redisKeys.leaderboard(pin),
+      playerId,
+    );
+
+    await this.updateRank(pin, playerId, oldRank, currentRank);
   },
 
   async getLeaderboard(pin: string) {
@@ -172,10 +179,16 @@ export const gameRepository = {
     return playersFormat;
   },
 
-  async updateRank(pin: string, userId: string, oldRank: number | null) {
+  async updateRank(
+    pin: string,
+    userId: string,
+    oldRank: number | null,
+    currentRank: number | null,
+  ) {
     const player = await this.getPlayer(pin, userId);
     if (player) {
       player.oldRank = oldRank;
+      player.currentRank = currentRank;
       await redisClient.hSet(
         redisKeys.players(pin),
         userId,

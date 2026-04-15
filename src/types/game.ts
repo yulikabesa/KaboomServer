@@ -15,6 +15,7 @@ export interface UserAnswer {
 export interface Player {
   nickname: string;
   oldRank: number | null;
+  currentRank: number | null;
 }
 
 export interface GameMeta {
