@@ -56,12 +56,6 @@ export const gameEngine = {
           },
         };
 
-      case "leaderboard":
-        return {
-          phase: meta.phase,
-          data: this.mapLeaderboard(leaderboard, players),
-        };
-
       default:
         return { phase: meta.phase, data: null };
     }
@@ -82,6 +76,21 @@ export const gameEngine = {
         };
 
       case "results":
+        return {
+          phase: meta.phase,
+          data: {
+            isCorrect:
+              playerAnswer !== undefined
+                ? this.isAnswerCorrect(
+                    question!.correctIndexes,
+                    playerAnswer.indexes,
+                  )
+                : false, // no answer
+            // todo: score
+          },
+        };
+
+      case "leaderboard":
         return {
           phase: meta.phase,
           data: {
@@ -130,7 +139,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            answers: answers,
+            answers: question?.answers,
             correctAnswers: question?.correctIndexes,
             distribution: this.buildDistribution(
               answers || {},
