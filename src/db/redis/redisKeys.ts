@@ -1,5 +1,4 @@
 export const redisKeys = {
-
   meta: (pin: string) =>
     `session:${pin}:meta`,
 
@@ -17,10 +16,4 @@ export const redisKeys = {
 
   connections: (pin: string) =>
     `session:${pin}:connections`,
-
-  // userGame: (userId: string) =>
-  //   `user:${userId}:game`,
-
-  // answerCounts: (pin: string, qIdx: number) => 
-  //   `session:${pin}:answerCounts:${qIdx}`
 };

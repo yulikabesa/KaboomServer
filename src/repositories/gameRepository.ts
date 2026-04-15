@@ -62,11 +62,6 @@ export const gameRepository = {
     );
   },
 
-  async getPlayers(pin: string) {
-    const players = await redisClient.hGetAll(redisKeys.players(pin));
-    return Object.keys(players).length === 0 ? null : players;
-  },
-
   async initLeaderboard(pin: string, playerId: string) {
     await redisClient.zAdd(redisKeys.leaderboard(pin), [
       { score: 0, value: playerId },
@@ -160,18 +155,31 @@ export const gameRepository = {
   },
 
   async getPlayer(pin: string, userId: string) {
-    return await redisClient.hGet(redisKeys.players(pin), userId);
+    const player = await redisClient.hGet(redisKeys.players(pin), userId);
+    if (!player) return null;
+    return JSON.parse(player);
+  },
+
+  async getPlayers(pin: string) {
+    const players = await redisClient.hGetAll(redisKeys.players(pin));
+    if (Object.keys(players).length === 0) return null;
+
+    const playersFormat: Record<string, Player> = {};
+    for (const [userId, val] of Object.entries(players)) {
+      players[userId] = JSON.parse(val);
+    }
+
+    return playersFormat;
   },
 
   async updateRank(pin: string, userId: string, oldRank: number | null) {
     const player = await this.getPlayer(pin, userId);
     if (player) {
-      const parsedPlayer = JSON.parse(player) as Player;
-      parsedPlayer.oldRank = oldRank;
+      player.oldRank = oldRank;
       await redisClient.hSet(
         redisKeys.players(pin),
         userId,
-        JSON.stringify(parsedPlayer),
+        JSON.stringify(player),
       );
     }
   },
@@ -199,17 +207,4 @@ export const gameRepository = {
       answers,
     };
   },
-
-  // async setUserGame(userId: string, pin: string) {
-  //   await redisClient.set(redisKeys.userGame(userId), pin);
-  // },
-
-  // async getUserGame(userId: string) {
-  //   return await redisClient.get(redisKeys.userGame(userId));
-  // },
-
-  // async clearUserGame(userId: string) {
-  //   // when game finishes/ host leaves or something idkkk
-  //   await redisClient.del(redisKeys.userGame(userId));
-  // },
 };
