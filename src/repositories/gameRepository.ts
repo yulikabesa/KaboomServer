@@ -166,7 +166,7 @@ export const gameRepository = {
 
     const playersFormat: Record<string, Player> = {};
     for (const [userId, val] of Object.entries(players)) {
-      players[userId] = JSON.parse(val);
+      playersFormat[userId] = JSON.parse(val);
     }
 
     return playersFormat;

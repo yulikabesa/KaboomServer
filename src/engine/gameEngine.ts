@@ -1,4 +1,4 @@
-import { GameFullState, GameQuestion, UserAnswer } from "../types/game";
+import { GameFullState, GameQuestion, Player, UserAnswer } from "../types/game";
 
 export const gameEngine = {
   formatQuestion(q: GameQuestion) {
@@ -36,7 +36,7 @@ export const gameEngine = {
     return counts;
   },
 
-  mapLeaderboard(leaderboard: any[], players: any) {
+  mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
     return leaderboard.map((p) => ({
       nickname: players[p.value].nickname,
       score: p.score,
@@ -45,7 +45,7 @@ export const gameEngine = {
 
   // Build the view that all players in a game can see
   buildSharedPlayerView(gameState: GameFullState) {
-    const { meta, players, leaderboard, question } = gameState;
+    const { meta, question } = gameState;
 
     switch (meta.phase) {
       case "answers":
