@@ -64,6 +64,7 @@ export const gameEngine = {
           phase: meta.phase,
           data: {
             hasAnswered: playerAnswer !== undefined,
+            answers: question?.answers,
           },
         };
 
