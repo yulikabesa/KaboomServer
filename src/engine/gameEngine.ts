@@ -85,7 +85,7 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            currentRank,
+            currentRank: currentRank ? currentRank + 1 : null,
             score: currentRank ? leaderboard[currentRank].score : 0,
           },
         };
@@ -101,7 +101,7 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            currentRank: players[userId].currentRank,
+            currentRank: currentRank ? currentRank + 1 : null,
             score: currentRank ? leaderboard[currentRank].score : 0,
           },
         };
@@ -113,7 +113,7 @@ export const gameEngine = {
 
   buildHostView(gameState: GameFullState) {
     const { meta, players, leaderboard, question, answers } = gameState;
-    const LEADERBOARD_DISPLAY = 6;
+    const LEADERBOARD_LIMIT = 6;
     const FINAL_LEADERBOARD = 5;
 
     switch (meta.phase) {
@@ -158,7 +158,7 @@ export const gameEngine = {
           phase: meta.phase,
           data: this.mapLeaderboard(
             meta.state === "playing"
-              ? leaderboard.slice(0, LEADERBOARD_DISPLAY)
+              ? leaderboard.slice(0, LEADERBOARD_LIMIT)
               : leaderboard.slice(0, FINAL_LEADERBOARD),
             players,
           ),
