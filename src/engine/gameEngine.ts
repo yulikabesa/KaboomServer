@@ -113,6 +113,8 @@ export const gameEngine = {
 
   buildHostView(gameState: GameFullState) {
     const { meta, players, leaderboard, question, answers } = gameState;
+    const LEADERBOARD_DISPLAY = 6;
+    const FINAL_LEADERBOARD = 5;
 
     switch (meta.phase) {
       case "question":
@@ -154,7 +156,12 @@ export const gameEngine = {
       case "leaderboard":
         return {
           phase: meta.phase,
-          data: this.mapLeaderboard(leaderboard, players),
+          data: this.mapLeaderboard(
+            meta.state === "playing"
+              ? leaderboard.slice(0, LEADERBOARD_DISPLAY)
+              : leaderboard.slice(0, FINAL_LEADERBOARD),
+            players,
+          ),
         };
 
       default:
