@@ -66,7 +66,7 @@ export const gameService = {
     if (!isNew) return;
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    const score = gameEngine.calculateScore(question.correctIndexes, answer);
+    const score = gameEngine.calculateScore(question.correctIndexes, answer, question.scoringWeight);
 
     if (score > 0) {
       await gameRepository.incrementScore(pin, playerId, score);

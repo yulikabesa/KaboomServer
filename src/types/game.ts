@@ -32,6 +32,7 @@ export interface GameQuestion {
   answers: string[];
   correctIndexes: number[];
   timeLimit: number;
+  scoringWeight: number;
 }
 
 export interface GameFullState {

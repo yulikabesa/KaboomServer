@@ -1,4 +1,4 @@
-import { GameFullState, GameQuestion, Player, UserAnswer } from "../types/game";
+import { GameFullState, Player, UserAnswer } from "../types/game";
 
 export const gameEngine = {
   isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
@@ -9,9 +9,14 @@ export const gameEngine = {
     );
   },
 
-  calculateScore(correctIndexes: number[], playerAnswer: number[]) {
+  calculateScore(
+    correctIndexes: number[],
+    playerAnswer: number[],
+    scoringWeight: number,
+  ) {
+    const SCORE = 1000;
     if (this.isAnswerCorrect(correctIndexes, playerAnswer)) {
-      return 1000;
+      return SCORE * scoringWeight;
     }
     return 0;
   },
@@ -55,8 +60,9 @@ export const gameEngine = {
 
   // Build the view for a single player (personal info)
   buildPersonalPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, question, players, answers } = gameState;
+    const { meta, question, players, answers, leaderboard } = gameState;
     const playerAnswer = answers?.[userId];
+    const currentRank = players[userId].currentRank;
 
     switch (meta.phase) {
       case "answers":
@@ -79,8 +85,8 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            currentRank: players[userId].currentRank,
-            // todo: score
+            currentRank,
+            score: currentRank ? leaderboard[currentRank].score : 0,
           },
         };
 
@@ -96,6 +102,7 @@ export const gameEngine = {
                   )
                 : false, // no answer
             currentRank: players[userId].currentRank,
+            score: currentRank ? leaderboard[currentRank].score : 0,
           },
         };
 
@@ -115,6 +122,7 @@ export const gameEngine = {
             currentQuestion: meta.currentQuestion,
             questionCount: meta.questionCount,
             question: question?.question,
+            scoringWeight: question?.scoringWeight,
           },
         };
 
@@ -125,6 +133,7 @@ export const gameEngine = {
             question: question?.question,
             answers: question?.answers,
             timeLimit: question?.timeLimit,
+            scoringWeight: question?.scoringWeight,
             answeredCount: answers ? Object.keys(answers).length : 0,
           },
         };

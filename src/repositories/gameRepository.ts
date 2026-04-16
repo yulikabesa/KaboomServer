@@ -89,7 +89,7 @@ export const gameRepository = {
     return await redisClient.zRangeWithScores(
       redisKeys.leaderboard(pin),
       0,
-      5,
+      -1,
       { REV: true },
     );
   },
@@ -100,6 +100,7 @@ export const gameRepository = {
       answers: JSON.stringify(q.answers),
       correctIndexes: JSON.stringify(q.correctIndexes),
       timeLimit: q.timeLimit || 10,
+      scoringWeight: q.scoringWeight,
     });
   },
 
@@ -112,6 +113,7 @@ export const gameRepository = {
           answers: JSON.parse(data.answers) as string[],
           correctIndexes: JSON.parse(data.correctIndexes) as number[],
           timeLimit: Number(data.timeLimit),
+          scoringWeight: Number(data.scoringWeight),
         };
   },
 
@@ -195,6 +197,20 @@ export const gameRepository = {
         JSON.stringify(player),
       );
     }
+  },
+
+  async getRankAbove(pin: string, rank: number | null) {
+    if (!rank) return;
+    return await redisClient.zRange(
+      redisKeys.leaderboard(pin),
+      rank + 1,
+      rank + 1,
+      { REV: true },
+    );
+  },
+
+  async getScore(pin: string, userId: string) {
+    return await redisClient.zScore(redisKeys.leaderboard(pin), userId);
   },
 
   async getFullState(pin: string): Promise<GameFullState | null> {
