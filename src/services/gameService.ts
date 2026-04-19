@@ -89,17 +89,16 @@ export const gameService = {
 
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
-
     const next = meta.currentQuestion + 1;
 
-    if (next >= meta.questionCount) {
-      await gameRepository.setMeta(pin, {
-        state: "finished",
-        phase: "leaderboard",
-        // phase: "podium",
-      });
-      return null;
-    }
+    // if (next >= meta.questionCount) {
+    //   await gameRepository.setMeta(pin, {
+    //     state: "finished",
+    //     phase: "leaderboard",
+    //     // phase: "podium",
+    //   });
+    //   return null;
+    // }
 
     await gameRepository.setMeta(pin, {
       currentQuestion: next,
@@ -119,9 +118,18 @@ export const gameService = {
   },
 
   async showLeaderboard(pin: string) {
-    await gameRepository.setMeta(pin, {
-      phase: "leaderboard",
-    });
+    const meta = await gameRepository.getMetaOrThrow(pin);
+    const next = meta.currentQuestion + 1;
+
+    if (next >= meta.questionCount) {
+      await gameRepository.setMeta(pin, {
+        phase: "podium",
+      });
+    } else {
+      await gameRepository.setMeta(pin, {
+        phase: "leaderboard",
+      });
+    }
   },
 
   async isHost(pin: string, userId: string) {
