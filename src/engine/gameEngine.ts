@@ -97,6 +97,14 @@ export const gameEngine = {
           },
         };
 
+      case "podium":
+        return {
+          phase: meta.phase,
+          data: {
+            currentRank: currentRank !== null ? currentRank + 1 : null,
+          },
+        };
+
       default:
         return { phase: meta.phase, data: null };
     }
