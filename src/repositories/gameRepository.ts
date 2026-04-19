@@ -1,5 +1,6 @@
 import { redisClient } from "../db/redis/redis";
 import { redisKeys } from "../db/redis/redisKeys";
+import { gameEngine } from "../engine/gameEngine";
 import {
   GameMeta,
   GamePhase,
@@ -186,15 +187,15 @@ export const gameRepository = {
     return await redisClient.zRevRank(redisKeys.leaderboard(pin), playerId);
   },
 
-  async getRankAbove(pin: string, rank: number | null) {
-    if (!rank) return;
-    return await redisClient.zRange(
-      redisKeys.leaderboard(pin),
-      rank + 1,
-      rank + 1,
-      { REV: true },
-    );
-  },
+  // async getRankAbove(pin: string, rank: number | null) {
+  //   if (!rank) return;
+  //   return await redisClient.zRange(
+  //     redisKeys.leaderboard(pin),
+  //     rank + 1,
+  //     rank + 1,
+  //     { REV: true },
+  //   );
+  // },
 
   async getScore(pin: string, userId: string) {
     return await redisClient.zScore(redisKeys.leaderboard(pin), userId);
@@ -205,7 +206,10 @@ export const gameRepository = {
     if (!meta) return null;
 
     const players = (await this.getPlayers(pin)) || {};
-    const leaderboard = await this.getLeaderboard(pin);
+    const leaderboard = gameEngine.mapLeaderboard(
+      await this.getLeaderboard(pin),
+      players,
+    );
 
     let question = null;
     let answers = null;
