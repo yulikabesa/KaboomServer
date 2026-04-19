@@ -95,7 +95,8 @@ export const gameService = {
     if (next >= meta.questionCount) {
       await gameRepository.setMeta(pin, {
         state: "finished",
-        phase: "podium",
+        phase: "leaderboard",
+        // phase: "podium",
       });
       return null;
     }

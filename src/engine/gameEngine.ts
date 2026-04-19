@@ -80,22 +80,6 @@ export const gameEngine = {
         };
 
       case "results":
-        return {
-          phase: meta.phase,
-          data: {
-            isCorrect:
-              playerAnswer !== undefined
-                ? this.isAnswerCorrect(
-                    question!.correctIndexes,
-                    playerAnswer.indexes,
-                  )
-                : false, // no answer
-            currentRank: currentRank !== null ? currentRank + 1 : null,
-            score,
-            rankAbove,
-          },
-        };
-
       case "leaderboard":
         return {
           phase: meta.phase,
@@ -112,6 +96,23 @@ export const gameEngine = {
             rankAbove,
           },
         };
+
+      // case "leaderboard":
+      //   return {
+      //     phase: meta.phase,
+      //     data: {
+      //       isCorrect:
+      //         playerAnswer !== undefined
+      //           ? this.isAnswerCorrect(
+      //               question!.correctIndexes,
+      //               playerAnswer.indexes,
+      //             )
+      //           : false, // no answer
+      //       currentRank: currentRank !== null ? currentRank + 1 : null,
+      //       score,
+      //       rankAbove,
+      //     },
+      //   };
 
       default:
         return { phase: meta.phase, data: null };
@@ -162,15 +163,20 @@ export const gameEngine = {
 
       case "leaderboard":
         return {
+          state: meta.state,
           phase: meta.phase,
-          data: leaderboard.slice(0, LEADERBOARD_LIMIT),
+          data:
+            meta.state === "playing"
+              ? leaderboard.slice(0, LEADERBOARD_LIMIT)
+              : leaderboard.slice(0, PODIUM_LIMIT),
+          // data: leaderboard.slice(0, LEADERBOARD_LIMIT),
         };
 
-      case "podium":
-        return {
-          phase: meta.phase,
-          data: leaderboard.slice(0, PODIUM_LIMIT),
-        };
+      // case "podium":
+      //   return {
+      //     phase: meta.phase,
+      //     data: leaderboard.slice(0, PODIUM_LIMIT),
+      //   };
 
       default:
         return { phase: meta.phase, data: null };
