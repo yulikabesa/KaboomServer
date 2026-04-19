@@ -77,13 +77,14 @@ export const gameService = {
     }
 
     const currentRank = await gameRepository.getRank(pin, playerId);
-    await gameRepository.updateRank(pin, playerId, currentRank);
+    // await gameRepository.updatePlayerRank(pin, playerId, currentRank);
   },
 
   async endQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "answers") return;
 
+    await gameRepository.updateRanks(pin);
     await gameRepository.setMeta(pin, { phase: "results" });
   },
 

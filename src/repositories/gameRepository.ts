@@ -170,11 +170,28 @@ export const gameRepository = {
     return playersFormat;
   },
 
-  async updateRank(pin: string, userId: string, currentRank: number | null) {
-    const player = await this.getPlayer(pin, userId);
-    if (player) {
+  // async updatePlayerRank(
+  //   pin: string,
+  //   userId: string,
+  //   currentRank: number | null,
+  // ) {
+  //   const player = await this.getPlayer(pin, userId);
+  //   if (player) {
+  //     player.oldRank = player.currentRank;
+  //     player.currentRank = currentRank;
+  //     await redisClient.hSet(
+  //       redisKeys.players(pin),
+  //       userId,
+  //       JSON.stringify(player),
+  //     );
+  //   }
+  // },
+
+  async updateRanks(pin: string) {
+    const players = (await this.getPlayers(pin)) || {};
+    for (const [userId, player] of Object.entries(players)) {
       player.oldRank = player.currentRank;
-      player.currentRank = currentRank;
+      player.currentRank = await this.getRank(pin, userId);
       await redisClient.hSet(
         redisKeys.players(pin),
         userId,
