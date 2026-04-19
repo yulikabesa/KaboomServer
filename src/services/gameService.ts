@@ -66,11 +66,18 @@ export const gameService = {
     if (!isNew) return;
 
     const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    const score = gameEngine.calculateScore(question.correctIndexes, answer, question.scoringWeight);
+    const score = gameEngine.calculateScore(
+      question.correctIndexes,
+      answer,
+      question.scoringWeight,
+    );
 
     if (score > 0) {
       await gameRepository.incrementScore(pin, playerId, score);
     }
+
+    const currentRank = await gameRepository.getRank(pin, playerId);
+    await gameRepository.updateRank(pin, playerId, currentRank);
   },
 
   async endQuestion(pin: string) {

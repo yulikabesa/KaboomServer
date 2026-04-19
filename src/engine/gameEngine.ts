@@ -85,8 +85,8 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            currentRank: currentRank ? currentRank + 1 : null,
-            score: currentRank ? leaderboard[currentRank].score : 0,
+            currentRank: currentRank !== null ? currentRank + 1 : null,
+            score: currentRank !== null ? leaderboard[currentRank].score : 0,
           },
         };
 
@@ -101,8 +101,8 @@ export const gameEngine = {
                     playerAnswer.indexes,
                   )
                 : false, // no answer
-            currentRank: currentRank ? currentRank + 1 : null,
-            score: currentRank ? leaderboard[currentRank].score : 0,
+            currentRank: currentRank !== null ? currentRank + 1 : null,
+            score: currentRank !== null ? leaderboard[currentRank].score : 0,
           },
         };
 
