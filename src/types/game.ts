@@ -5,7 +5,8 @@ export type GamePhase =
   | "question"
   | "answers"
   | "results"
-  | "leaderboard";
+  | "leaderboard"
+  | "podium";
 
 export interface UserAnswer {
   indexes: number[];

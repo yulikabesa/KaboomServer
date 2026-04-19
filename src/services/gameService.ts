@@ -95,7 +95,7 @@ export const gameService = {
     if (next >= meta.questionCount) {
       await gameRepository.setMeta(pin, {
         state: "finished",
-        phase: "leaderboard",
+        phase: "podium",
       });
       return null;
     }
@@ -145,11 +145,12 @@ export const gameService = {
 
   async handleReconnect(pin: string, userId: string) {
     const meta = await gameRepository.getMeta(pin);
-    // todo: fix to a nice solution
     const player =
       userId === meta?.host
         ? meta.host
         : await gameRepository.getPlayer(pin, userId);
+
+    // only allow if game exists and user is a player
     if (!meta || !player)
       return { success: false, error: "Invalid game access" };
 
