@@ -200,6 +200,20 @@ export const gameRepository = {
     }
   },
 
+  async updateScores(pin: string, qIdx: number) {
+    const question = await this.getQuestionOrThrow(pin, qIdx);
+
+    const answers = (await this.getAnswers(pin, qIdx)) || {};
+    for (const [userId, answer] of Object.entries(answers)) {
+      const score = gameEngine.calculateScore(
+        question.correctIndexes,
+        answer.indexes,
+        question.scoringWeight,
+      );
+      if (score > 0) await this.incrementScore(pin, userId, score);
+    }
+  },
+
   async getRank(pin: string, playerId: string) {
     return await redisClient.zRevRank(redisKeys.leaderboard(pin), playerId);
   },

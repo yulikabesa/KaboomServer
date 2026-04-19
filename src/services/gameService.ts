@@ -55,35 +55,16 @@ export const gameService = {
     if (meta.phase !== "answers") return;
 
     const qIdx = meta.currentQuestion;
-
-    const isNew = await gameRepository.submitAnswer(
-      pin,
-      qIdx,
-      playerId,
-      answer,
-    );
-
-    if (!isNew) return;
-
-    const question = await gameRepository.getQuestionOrThrow(pin, qIdx);
-    const score = gameEngine.calculateScore(
-      question.correctIndexes,
-      answer,
-      question.scoringWeight,
-    );
-
-    if (score > 0) {
-      await gameRepository.incrementScore(pin, playerId, score);
-    }
-
-    const currentRank = await gameRepository.getRank(pin, playerId);
-    // await gameRepository.updatePlayerRank(pin, playerId, currentRank);
+    await gameRepository.submitAnswer(pin, qIdx, playerId, answer);
   },
 
   async endQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "answers") return;
 
+    const qIdx = meta.currentQuestion;
+
+    await gameRepository.updateScores(pin, qIdx);
     await gameRepository.updateRanks(pin);
     await gameRepository.setMeta(pin, { phase: "results" });
   },
@@ -91,15 +72,6 @@ export const gameService = {
   async nextQuestion(pin: string) {
     const meta = await gameRepository.getMetaOrThrow(pin);
     const next = meta.currentQuestion + 1;
-
-    // if (next >= meta.questionCount) {
-    //   await gameRepository.setMeta(pin, {
-    //     state: "finished",
-    //     phase: "leaderboard",
-    //     // phase: "podium",
-    //   });
-    //   return null;
-    // }
 
     await gameRepository.setMeta(pin, {
       currentQuestion: next,
