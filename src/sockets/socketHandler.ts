@@ -34,6 +34,7 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
     pin,
     userId,
   );
+
   if (error) {
     socket.emit("error", error);
     socket.disconnect();

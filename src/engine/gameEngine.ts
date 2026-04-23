@@ -102,6 +102,7 @@ export const gameEngine = {
           phase: meta.phase,
           data: {
             currentRank: currentRank !== null ? currentRank + 1 : null,
+            score,
           },
         };
 
