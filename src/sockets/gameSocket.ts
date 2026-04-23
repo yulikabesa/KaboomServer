@@ -70,8 +70,12 @@ const handlers = {
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     await gameService.startGame(socket.data.pin);
-    await emitGameState(io, socket.data.pin); // phase is "question"
+    // await emitGameState(io, socket.data.pin); // phase is "question"
   }),
+
+  "get-game-state": async (payload: any, socket: Socket, io: Server) => {
+    await emitGameState(io, socket.data.pin);
+  },
 
   "reveal-answers": async (payload: any, socket: Socket, io: Server) => {
     await gameService.revealAnswers(socket.data.pin);
