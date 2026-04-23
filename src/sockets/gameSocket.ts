@@ -65,11 +65,13 @@ const handlers = {
 
     const hostId = await gameRepository.getHost(payload.pin);
     io.to(`user:${hostId}`).emit("player-joined", player);
+    // todo: change
     socket.emit("game-state", { phase: "lobby", data: {} });
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     await gameService.startGame(socket.data.pin);
+    io.to(`user:${socket.data.userId}`).emit("game-started");
     // await emitGameState(io, socket.data.pin); // phase is "question"
   }),
 
