@@ -30,7 +30,7 @@ const authMiddleware = (socket: Socket, next: (err?: Error) => void) => {
 };
 
 const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
-  const { error, gameState, playerState } = await gameService.handleReconnect(
+  const { error, playerState } = await gameService.handleReconnect(
     pin,
     userId,
   );
@@ -45,11 +45,7 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
   socket.join(`game:${pin}`);
 
   // Restore state
-  if (playerState?.data) {
-    socket.emit("game-state", playerState);
-  } else {
-    socket.emit("game-state", gameState);
-  }
+  socket.emit("game-state", playerState);
 };
 
 function handleDisconnect(io: Server, socket: Socket) {

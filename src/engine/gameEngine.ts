@@ -76,6 +76,7 @@ export const gameEngine = {
           data: {
             hasAnswered: playerAnswer !== undefined,
             answers: question?.answers,
+            score,
           },
         };
 
@@ -92,8 +93,8 @@ export const gameEngine = {
                   )
                 : false, // no answer
             currentRank: currentRank !== null ? currentRank + 1 : null,
-            score,
             rankAbove,
+            score,
           },
         };
 
@@ -107,7 +108,7 @@ export const gameEngine = {
         };
 
       default:
-        return { phase: meta.phase, data: null };
+        return { phase: meta.phase, data: { score } };
     }
   },
 

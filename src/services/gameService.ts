@@ -141,20 +141,14 @@ export const gameService = {
       return { success: false, error: "Failed to find game" };
     }
 
-    // format full state for this player
-    const gameView =
-      meta.host === userId
-        ? gameEngine.buildHostView(gameState)
-        : gameEngine.buildSharedPlayerView(gameState);
-
+    // format state for this player
     const playerView =
       meta.host === userId
-        ? null
+        ? gameEngine.buildHostView(gameState)
         : gameEngine.buildPersonalPlayerView(gameState, userId);
 
     return {
       success: true,
-      gameState: gameView,
       playerState: playerView,
     };
   },
