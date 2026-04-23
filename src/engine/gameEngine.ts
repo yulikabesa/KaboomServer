@@ -154,12 +154,7 @@ export const gameEngine = {
 
       case "leaderboard":
         return {
-          // state: meta.state,
           phase: meta.phase,
-          // data:
-          //   meta.state === "playing"
-          //     ? leaderboard.slice(0, LEADERBOARD_LIMIT)
-          //     : leaderboard.slice(0, PODIUM_LIMIT),
           data: leaderboard.slice(0, LEADERBOARD_LIMIT),
         };
 

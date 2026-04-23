@@ -8,11 +8,7 @@ const hostOnly =
   (handler: (payload: any, socket: Socket, io: Server) => Promise<void>) =>
   async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
-    const isHost = await gameService.isHost(
-      // payload.pin ??
-      socket.data.pin,
-      userId,
-    );
+    const isHost = await gameService.isHost(socket.data.pin, userId);
     if (!isHost) {
       socket.emit("error", "Only host can perform this action");
       return;
@@ -33,7 +29,7 @@ export const emitGameState = async (io: Server, pin: string) => {
       .emit("game-state", sharedView);
   } else {
     for (const userId of Object.keys(state.players)) {
-      if (userId === hostId) continue;
+      // if (userId === hostId) continue;
 
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);
       io.to(`user:${userId}`).emit("game-state", personalView);
@@ -73,15 +69,8 @@ const handlers = {
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    await gameService.startGame(
-      // payload.pin
-      socket.data.pin,
-    );
-    await emitGameState(
-      io,
-      // payload.pin
-      socket.data.pin,
-    ); // phase is "question"
+    await gameService.startGame(socket.data.pin);
+    await emitGameState(io, socket.data.pin); // phase is "question"
   }),
 
   "reveal-answers": async (payload: any, socket: Socket, io: Server) => {
@@ -92,102 +81,46 @@ const handlers = {
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
 
-    await gameService.submitAnswer(
-      // payload.pin,
-      socket.data.pin,
-      userId,
-      payload.answer,
-    );
+    await gameService.submitAnswer(socket.data.pin, userId, payload.answer);
     // socket.emit("answer-received");
 
-    const progress = await gameService.getAnswerProgress(
-      // payload.pin
-      socket.data.pin,
-    );
-    const hostUserId = await gameService.getHost(
-      // payload.pin
-      socket.data.pin,
-    );
+    const progress = await gameService.getAnswerProgress(socket.data.pin);
+    const hostUserId = await gameService.getHost(socket.data.pin);
     io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
 
-    const state = await gameRepository.getFullState(
-      // payload.pin
-      socket.data.pin,
-    );
+    const state = await gameRepository.getFullState(socket.data.pin);
     if (state) {
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);
       io.to(`user:${userId}`).emit("game-state", personalView);
     }
 
     if (progress.answered === progress.totalPlayers) {
-      await gameService.endQuestion(
-        // payload.pin
-        socket.data.pin,
-      );
-      await emitGameState(
-        io,
-        // payload.pin
-        socket.data.pin,
-      ); // phase is "results"
+      await gameService.endQuestion(socket.data.pin);
+      await emitGameState(io, socket.data.pin); // phase is "results"
     }
   },
 
   "next-question": hostOnly(
     async (payload: any, socket: Socket, io: Server) => {
-      await gameService.nextQuestion(
-        // payload.pin
-        socket.data.pin,
-      );
-      await emitGameState(
-        io,
-        // payload.pin
-        socket.data.pin,
-      );
+      await gameService.nextQuestion(socket.data.pin);
+      await emitGameState(io, socket.data.pin);
     },
   ),
 
   "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
-    await gameService.endQuestion(
-      // payload.pin
-      socket.data.pin,
-    );
-    await emitGameState(
-      io,
-      // payload.pin
-      socket.data.pin,
-    ); // phase is "results"
+    await gameService.endQuestion(socket.data.pin);
+    await emitGameState(io, socket.data.pin); // phase is "results"
   }),
 
   "show-leaderboard": hostOnly(async (payload, socket, io) => {
-    await gameService.showLeaderboard(
-      // payload.pin
-      socket.data.pin,
-    );
-    await emitGameState(
-      io,
-      // payload.pin
-      socket.data.pin,
-    ); // phase is "leaderboard"
+    await gameService.showLeaderboard(socket.data.pin);
+    await emitGameState(io, socket.data.pin); // phase is "leaderboard"
   }),
 
   "validate-pin": async (payload: any, socket: Socket) => {
     const data = await gameService.validatePin(payload.pin);
     socket.emit(data.success ? "pin-valid" : "pin-error", data.error);
   },
-
-  // "rejoin-game": async (payload: any, socket: Socket) => {
-  //   const userId = socket.data.userId;
-  //   const data = await gameService.handleReconnect(payload.pin, userId, socket.id);
-
-  //   if (!data.success) {
-  //     socket.emit("rejoin-error", data.error);
-  //     return;
-  //   }
-
-  //   socket.join(`game:${payload.pin}`);
-  //   socket.data.pin = payload.pin;
-  //   socket.emit("game-state", data.state);
-  // },
 };
 
 type HandlerKeys = keyof typeof handlers;
