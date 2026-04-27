@@ -67,8 +67,6 @@ const handlers = {
     io.to(`user:${hostId}`).emit("player-joined", player);
 
     // todo: change game state emission and decide if joining game should always be allowed
-    // socket.emit("game-state", { phase: "lobby", data: {} });
-
     const state = await gameRepository.getFullState(socket.data.pin);
     if (state) {
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);

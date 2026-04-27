@@ -94,15 +94,15 @@ export const gameRepository = {
   },
 
   async getQuestion(pin: string, index: number): Promise<GameQuestion | null> {
-    const data = await redisClient.hGetAll(redisKeys.question(pin, index));
-    return Object.keys(data).length === 0
+    const q = await redisClient.hGetAll(redisKeys.question(pin, index));
+    return Object.keys(q).length === 0
       ? null
       : {
-          question: data.question,
-          answers: JSON.parse(data.answers) as string[],
-          correctIndexes: JSON.parse(data.correctIndexes) as number[],
-          timeLimit: Number(data.timeLimit),
-          scoringWeight: Number(data.scoringWeight),
+          question: q.question,
+          answers: JSON.parse(q.answers) as string[],
+          correctIndexes: JSON.parse(q.correctIndexes) as number[],
+          timeLimit: Number(q.timeLimit),
+          scoringWeight: Number(q.scoringWeight),
         };
   },
 
@@ -169,23 +169,6 @@ export const gameRepository = {
 
     return playersFormat;
   },
-
-  // async updatePlayerRank(
-  //   pin: string,
-  //   userId: string,
-  //   currentRank: number | null,
-  // ) {
-  //   const player = await this.getPlayer(pin, userId);
-  //   if (player) {
-  //     player.oldRank = player.currentRank;
-  //     player.currentRank = currentRank;
-  //     await redisClient.hSet(
-  //       redisKeys.players(pin),
-  //       userId,
-  //       JSON.stringify(player),
-  //     );
-  //   }
-  // },
 
   async updateRanks(pin: string) {
     const players = (await this.getPlayers(pin)) || {};
