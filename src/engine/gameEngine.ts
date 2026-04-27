@@ -138,6 +138,7 @@ export const gameEngine = {
             timeLimit: question?.timeLimit,
             scoringWeight: question?.scoringWeight,
             answeredCount: answers ? Object.keys(answers).length : 0,
+            questionImage: question?.questionImage
           },
         };
 

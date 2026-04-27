@@ -85,6 +85,7 @@ export const gameRepository = {
 
   async saveQuestion(pin: string, index: number, q: GameQuestion) {
     await redisClient.hSet(redisKeys.question(pin, index), {
+      questionImage: q.questionImage ?? "",
       questionText: q.questionText,
       answerOptions: JSON.stringify(q.answerOptions),
       correctIndexes: JSON.stringify(q.correctIndexes),
@@ -98,6 +99,7 @@ export const gameRepository = {
     return Object.keys(q).length === 0
       ? null
       : {
+          questionImage: q.questionImage,
           questionText: q.questionText,
           answerOptions: JSON.parse(q.answerOptions) as string[],
           correctIndexes: JSON.parse(q.correctIndexes) as number[],
