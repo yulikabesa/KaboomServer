@@ -1,6 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IQuestion {
+  questionImage?: string;
   question: string;
   answers: string[];
   correctIndexes: number[];
@@ -9,12 +10,17 @@ export interface IQuestion {
 }
 
 export interface IQuiz extends Document {
+  coverImage?: string;
   title: string;
   questions: IQuestion[];
   createdAt: Date;
 }
 
 const QuestionSchema = new Schema<IQuestion>({
+  questionImage: {
+    type: String,
+    required: false,
+  },
   question: {
     type: String,
     required: true,
@@ -39,6 +45,11 @@ const QuestionSchema = new Schema<IQuestion>({
 
 const QuizSchema = new Schema<IQuiz>(
   {
+    coverImage: {
+      type: String,
+      // default: ,
+      // todo ask design team to create image for default cover
+    },
     title: {
       type: String,
       required: true,
