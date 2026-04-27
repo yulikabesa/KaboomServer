@@ -34,7 +34,7 @@ export interface GameQuestion {
   correctIndexes: number[];
   timeLimit: number;
   scoringWeight: number;
-  questionImage: string | null;
+  questionImage?: string;
 }
 
 export interface GameFullState {
