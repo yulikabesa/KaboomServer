@@ -84,7 +84,7 @@ export const gameService = {
     const qIdx = meta.currentQuestion;
 
     const answered = await gameRepository.getAnswerCount(pin, qIdx);
-    const players = (await gameRepository.getPlayers(pin)) || {};
+    const players = await gameRepository.getPlayers(pin);
     const totalPlayers = Object.keys(players).length;
 
     return { answered, totalPlayers };

@@ -7,9 +7,13 @@ export const redisKeys = {
   question: (pin: string, qIdx: number) =>
     `session:${pin}:question:${qIdx}`,
 
-  // Hash { userId: JSON -> { nickname, oldRank, currentRank } }
+  // Set
   players: (pin: string) =>
     `session:${pin}:players`,
+
+  // Hash 
+  player: (pin: string, userId: string) =>
+    `session:${pin}:player:${userId}`,
 
   // Hash { userId: JSON -> { indexes, answeredAt } }
   answers: (pin: string, qIdx: number) =>

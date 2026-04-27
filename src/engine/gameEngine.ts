@@ -1,3 +1,4 @@
+import { gameRepository } from "../repositories/gameRepository";
 import { GameFullState, Player, UserAnswer } from "../types/game";
 
 export const gameEngine = {
@@ -33,11 +34,12 @@ export const gameEngine = {
     return counts;
   },
 
-  mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
-    return leaderboard.map((p) => ({
-      nickname: players[p.value].nickname,
-      score: p.score,
-    }));
+  mapLeaderboard(leaderboard: any[], players: string[]) {
+    return leaderboard
+    // .map((p) => ({
+    //   nickname: players[p.value].nickname,
+    //   score: p.score,
+    // }));
   },
 
   // Build the view that all players in a game can see
@@ -59,10 +61,10 @@ export const gameEngine = {
   },
 
   // Build the view for a single player (personal info)
-  buildPersonalPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, question, players, answers, leaderboard } = gameState;
+  async buildPersonalPlayerView(gameState: GameFullState, userId: string) {
+    const { meta, question, players, answers, leaderboard, pin } = gameState;
     const playerAnswer = answers?.[userId];
-    const currentRank = players[userId].currentRank;
+    const currentRank = await gameRepository.getRank(pin, userId);
     const score = currentRank !== null ? leaderboard[currentRank].score : 0;
     const rankAbove =
       currentRank !== null && currentRank !== 0

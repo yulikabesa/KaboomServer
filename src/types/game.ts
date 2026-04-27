@@ -39,8 +39,9 @@ export interface GameQuestion {
 
 export interface GameFullState {
   meta: GameMeta;
-  players: Record<string, Player>;
+  players: string[];
   leaderboard: { nickname: string; score: number }[];
   question: GameQuestion | null;
   answers: Record<string, UserAnswer> | null;
+  pin: string
 }

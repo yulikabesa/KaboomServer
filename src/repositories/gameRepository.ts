@@ -51,27 +51,23 @@ export const gameRepository = {
   },
 
   async addPlayer(pin: string, userId: string, nickname: string) {
-    const player = {
-      nickname,
-      oldRank: null,
-      currentRank: null,
-    };
+    await redisClient.sAdd(redisKeys.players(pin), userId);
 
-    await redisClient.hSet(
-      redisKeys.players(pin),
-      userId,
-      JSON.stringify(player),
-    );
+    await redisClient.hSet(redisKeys.player(pin, userId), {
+      nickname,
+      oldRank: "",
+      currentRank: "",
+    });
   },
 
-  async initLeaderboard(pin: string, playerId: string) {
+  async initLeaderboard(pin: string, userId: string) {
     await redisClient.zAdd(redisKeys.leaderboard(pin), [
-      { score: 0, value: playerId },
+      { score: 0, value: userId },
     ]);
   },
 
-  async incrementScore(pin: string, playerId: string, score: number) {
-    await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, playerId);
+  async incrementScore(pin: string, userId: string, score: number) {
+    await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, userId);
   },
 
   async getLeaderboard(pin: string) {
@@ -155,33 +151,26 @@ export const gameRepository = {
   },
 
   async getPlayer(pin: string, userId: string) {
-    const player = await redisClient.hGet(redisKeys.players(pin), userId);
+    const player = await redisClient.hGetAll(redisKeys.player(pin, userId));
     if (!player) return null;
-    return JSON.parse(player);
+    
+    return player;
   },
 
   async getPlayers(pin: string) {
-    const players = await redisClient.hGetAll(redisKeys.players(pin));
-    if (Object.keys(players).length === 0) return null;
-
-    const playersFormat: Record<string, Player> = {};
-    for (const [userId, val] of Object.entries(players)) {
-      playersFormat[userId] = JSON.parse(val);
-    }
-
-    return playersFormat;
+    return await redisClient.sMembers(redisKeys.players(pin));
   },
 
   async updateRanks(pin: string) {
-    const players = (await this.getPlayers(pin)) || {};
-    for (const [userId, player] of Object.entries(players)) {
-      player.oldRank = player.currentRank;
-      player.currentRank = await this.getRank(pin, userId);
-      await redisClient.hSet(
-        redisKeys.players(pin),
-        userId,
-        JSON.stringify(player),
-      );
+    const players = await this.getPlayers(pin);
+    for (const userId of players) {
+      const player = await redisClient.hGetAll(redisKeys.player(pin, userId));
+      const currentRank = await this.getRank(pin, userId);
+      await redisClient.hSet(redisKeys.player(pin, userId), {
+        ...player,
+        oldRank: player.currentRank,
+        currentRank: currentRank || "",
+      });
     }
   },
 
@@ -221,7 +210,7 @@ export const gameRepository = {
     const meta = await this.getMeta(pin);
     if (!meta) return null;
 
-    const players = (await this.getPlayers(pin)) || {};
+    const players = await this.getPlayers(pin);
     const leaderboard = gameEngine.mapLeaderboard(
       await this.getLeaderboard(pin),
       players,
@@ -241,6 +230,7 @@ export const gameRepository = {
       leaderboard,
       question,
       answers,
+      pin
     };
   },
 };
