@@ -28,10 +28,10 @@ export const emitGameState = async (io: Server, pin: string) => {
       .except(`user:${hostId}`)
       .emit("game-state", sharedView);
   } else {
-    for (const userId of Object.keys(state.players)) {
+    for (const userId of state.players) {
       // if (userId === hostId) continue;
-
-      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      
+      const personalView = await gameEngine.buildPersonalPlayerView(state, userId);
       io.to(`user:${userId}`).emit("game-state", personalView);
     }
   }

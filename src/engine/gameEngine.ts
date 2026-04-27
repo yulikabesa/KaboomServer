@@ -35,7 +35,8 @@ export const gameEngine = {
   },
 
   mapLeaderboard(leaderboard: any[], players: string[]) {
-    return leaderboard
+    // todo: fix 
+    return leaderboard;
     // .map((p) => ({
     //   nickname: players[p.value].nickname,
     //   score: p.score,
@@ -140,7 +141,7 @@ export const gameEngine = {
             timeLimit: question?.timeLimit,
             scoringWeight: question?.scoringWeight,
             answeredCount: answers ? Object.keys(answers).length : 0,
-            questionImage: question?.questionImage
+            questionImage: question?.questionImage,
           },
         };
 
@@ -148,6 +149,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
+            questionText: question?.questionText,
             answerOptions: question?.answerOptions,
             correctAnswers: question?.correctIndexes,
             distribution: this.buildDistribution(
