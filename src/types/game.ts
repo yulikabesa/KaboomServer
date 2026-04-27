@@ -29,8 +29,8 @@ export interface GameMeta {
 }
 
 export interface GameQuestion {
-  question: string;
-  answers: string[];
+  questionText: string;
+  answerOptions: string[];
   correctIndexes: number[];
   timeLimit: number;
   scoringWeight: number;

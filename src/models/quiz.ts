@@ -2,8 +2,8 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IQuestion {
   questionImage?: string;
-  question: string;
-  answers: string[];
+  questionText: string;
+  answerOptions: string[];
   correctIndexes: number[];
   timeLimit: number;
   scoringWeight: number;
@@ -21,11 +21,11 @@ const QuestionSchema = new Schema<IQuestion>({
     type: String,
     required: false,
   },
-  question: {
+  questionText: {
     type: String,
     required: true,
   },
-  answers: {
+  answerOptions: {
     type: [String],
     required: true,
   },

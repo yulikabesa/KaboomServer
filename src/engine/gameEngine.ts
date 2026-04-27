@@ -49,7 +49,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            answers: question?.answers,
+            answerOptions: question?.answerOptions,
           },
         };
 
@@ -75,7 +75,7 @@ export const gameEngine = {
           phase: meta.phase,
           data: {
             hasAnswered: playerAnswer !== undefined,
-            answers: question?.answers,
+            answerOptions: question?.answerOptions,
             score,
           },
         };
@@ -124,7 +124,7 @@ export const gameEngine = {
           data: {
             currentQuestion: meta.currentQuestion,
             questionCount: meta.questionCount,
-            question: question?.question,
+            questionText: question?.questionText,
             scoringWeight: question?.scoringWeight,
           },
         };
@@ -133,8 +133,8 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            question: question?.question,
-            answers: question?.answers,
+            questionText: question?.questionText,
+            answerOptions: question?.answerOptions,
             timeLimit: question?.timeLimit,
             scoringWeight: question?.scoringWeight,
             answeredCount: answers ? Object.keys(answers).length : 0,
@@ -145,11 +145,11 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            answers: question?.answers,
+            answerOptions: question?.answerOptions,
             correctAnswers: question?.correctIndexes,
             distribution: this.buildDistribution(
               answers || {},
-              question?.answers.length || 0,
+              question?.answerOptions.length || 0,
             ),
           },
         };
