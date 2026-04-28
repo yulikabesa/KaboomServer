@@ -7,8 +7,8 @@ import {
   GameState,
   GameFullState,
   GameQuestion,
-  UserAnswer,
   Player,
+  UserAnswer,
 } from "../types/game";
 
 export const gameRepository = {
@@ -81,10 +81,10 @@ export const gameRepository = {
 
   async saveQuestion(pin: string, index: number, q: GameQuestion) {
     await redisClient.hSet(redisKeys.question(pin, index), {
-      questionImage: q.questionImage ?? "",
+      questionImage: q.questionImage || "",
       questionText: q.questionText,
       answerOptions: JSON.stringify(q.answerOptions),
-      correctIndexes: JSON.stringify(q.correctIndexes),
+      correctIndexes: q.correctIndexes.join("-"),
       timeLimit: q.timeLimit || 10,
       scoringWeight: q.scoringWeight,
     });
@@ -98,7 +98,7 @@ export const gameRepository = {
           questionImage: q.questionImage,
           questionText: q.questionText,
           answerOptions: JSON.parse(q.answerOptions) as string[],
-          correctIndexes: JSON.parse(q.correctIndexes) as number[],
+          correctIndexes: q.correctIndexes.split("-").map(Number),
           timeLimit: Number(q.timeLimit),
           scoringWeight: Number(q.scoringWeight),
         };
@@ -107,35 +107,44 @@ export const gameRepository = {
   async submitAnswer(
     pin: string,
     qIdx: number,
-    playerId: string,
+    userId: string,
     indexes: number[],
   ) {
-    const answer: UserAnswer = {
-      indexes,
-      answeredAt: Date.now(),
-    };
+    if (await redisClient.sIsMember(redisKeys.answered(pin, qIdx), userId))
+      return;
 
-    return await redisClient.hSetNX(
-      redisKeys.answers(pin, qIdx),
-      playerId,
-      JSON.stringify(answer),
+    const answer = indexes.join("-");
+    await redisClient.sAdd(redisKeys.answered(pin, qIdx), userId);
+    await redisClient.hSet(redisKeys.answer(pin, qIdx, userId), {
+      indexes: answer,
+      answeredAt: Date.now(),
+    });
+  },
+
+  async getAnswer(pin: string, qIdx: number, userId: string) {
+    const answer = await redisClient.hGetAll(
+      redisKeys.answer(pin, qIdx, userId),
     );
+
+    const indexesArray = answer.indexes.split("-").map(Number);
+    return {
+      answeredAt: Number(answer.answeredAt),
+      indexes: indexesArray,
+    };
   },
 
   async getAnswers(pin: string, qIdx: number) {
-    const answers = await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
-    if (Object.keys(answers).length === 0) return null;
-
-    const answersFormat: Record<string, UserAnswer> = {};
-    for (const [userId, val] of Object.entries(answers)) {
-      answersFormat[userId] = JSON.parse(val);
+    const answers: Record<string, UserAnswer> = {};
+    const answered = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
+    for (const userId of answered) {
+      const answer = await this.getAnswer(pin, qIdx, userId);
+      if (answer) answers[userId] = answer;
     }
-
-    return answersFormat;
+    return answers;
   },
 
   async getAnswerCount(pin: string, qIdx: number) {
-    return await redisClient.hLen(redisKeys.answers(pin, qIdx));
+    return await redisClient.sCard(redisKeys.answered(pin, qIdx));
   },
 
   async getMetaOrThrow(pin: string) {
@@ -153,7 +162,7 @@ export const gameRepository = {
   async getPlayer(pin: string, userId: string) {
     const player = await redisClient.hGetAll(redisKeys.player(pin, userId));
     if (!player) return null;
-    
+
     return player;
   },
 
@@ -177,7 +186,7 @@ export const gameRepository = {
   async updateScores(pin: string, qIdx: number) {
     const question = await this.getQuestionOrThrow(pin, qIdx);
 
-    const answers = (await this.getAnswers(pin, qIdx)) || {};
+    const answers = await this.getAnswers(pin, qIdx);
     for (const [userId, answer] of Object.entries(answers)) {
       const score = gameEngine.calculateScore(
         question.correctIndexes,
@@ -230,7 +239,7 @@ export const gameRepository = {
       leaderboard,
       question,
       answers,
-      pin
+      pin,
     };
   },
 };

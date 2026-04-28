@@ -30,7 +30,7 @@ export const gameService = {
     await gameRepository.addPlayer(pin, userId, nickname);
     await gameRepository.initLeaderboard(pin, userId);
 
-    return { id: userId, nickname };
+    return { userId, nickname };
   },
 
   async startGame(pin: string) {
@@ -108,10 +108,6 @@ export const gameService = {
   async isHost(pin: string, userId: string) {
     const host = await gameRepository.getHost(pin);
     return host === userId;
-  },
-
-  async getHost(pin: string) {
-    return await gameRepository.getHost(pin);
   },
 
   async validatePin(pin: string) {

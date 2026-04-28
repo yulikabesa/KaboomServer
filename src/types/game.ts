@@ -34,7 +34,7 @@ export interface GameQuestion {
   correctIndexes: number[];
   timeLimit: number;
   scoringWeight: number;
-  questionImage?: string;
+  questionImage?: string | null;
 }
 
 export interface GameFullState {
@@ -43,5 +43,5 @@ export interface GameFullState {
   leaderboard: { nickname: string; score: number }[];
   question: GameQuestion | null;
   answers: Record<string, UserAnswer> | null;
-  pin: string
+  pin: string;
 }

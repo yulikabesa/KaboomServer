@@ -1,5 +1,5 @@
 import { gameRepository } from "../repositories/gameRepository";
-import { GameFullState, Player, UserAnswer } from "../types/game";
+import { UserAnswer, GameFullState } from "../types/game";
 
 export const gameEngine = {
   isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
@@ -35,7 +35,7 @@ export const gameEngine = {
   },
 
   mapLeaderboard(leaderboard: any[], players: string[]) {
-    // todo: fix 
+    // todo: fix
     return leaderboard;
     // .map((p) => ({
     //   nickname: players[p.value].nickname,
@@ -63,8 +63,12 @@ export const gameEngine = {
 
   // Build the view for a single player (personal info)
   async buildPersonalPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, question, players, answers, leaderboard, pin } = gameState;
-    const playerAnswer = answers?.[userId];
+    const { meta, question, answers, leaderboard, pin } = gameState;
+    const playerAnswer = answers
+      ? answers[userId]
+        ? await gameRepository.getAnswer(pin, meta.currentQuestion, userId)
+        : null
+      : null;
     const currentRank = await gameRepository.getRank(pin, userId);
     const score = currentRank !== null ? leaderboard[currentRank].score : 0;
     const rankAbove =
@@ -77,7 +81,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            hasAnswered: playerAnswer !== undefined,
+            hasAnswered: !!playerAnswer,
             answerOptions: question?.answerOptions,
             score,
           },
@@ -88,13 +92,12 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            isCorrect:
-              playerAnswer !== undefined
-                ? this.isAnswerCorrect(
-                    question!.correctIndexes,
-                    playerAnswer.indexes,
-                  )
-                : false, // no answer
+            isCorrect: playerAnswer
+              ? this.isAnswerCorrect(
+                  question!.correctIndexes,
+                  playerAnswer.indexes,
+                )
+              : false, // no answer
             currentRank: currentRank !== null ? currentRank + 1 : null,
             rankAbove,
             score,

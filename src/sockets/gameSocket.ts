@@ -54,6 +54,7 @@ const handlers = {
 
   "join-game": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
+    // todo: check for existing player before
     const player = await gameService.addPlayer(
       payload.pin,
       userId,
@@ -96,12 +97,12 @@ const handlers = {
     // socket.emit("answer-received");
 
     const progress = await gameService.getAnswerProgress(socket.data.pin);
-    const hostUserId = await gameService.getHost(socket.data.pin);
+    const hostUserId = await gameRepository.getHost(socket.data.pin);
     io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
 
     const state = await gameRepository.getFullState(socket.data.pin);
     if (state) {
-      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      const personalView = await gameEngine.buildPersonalPlayerView(state, userId);
       io.to(`user:${userId}`).emit("game-state", personalView);
     }
 
