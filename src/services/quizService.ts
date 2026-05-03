@@ -13,4 +13,16 @@ export class QuizService {
   static async getQuizById(id: string): Promise<IQuiz | null> {
     return Quiz.findById(id);
   }
+
+  // GET quizes by owner
+  static async getQuizesByOwner(ownerId: string): Promise<IQuiz[]> {
+    return Quiz.find({ owner: ownerId }).sort({ createdAt: -1 });
+  }
+
+  // GET quizes shared with user
+  static async getQuizesSharedWith(userId: string): Promise<IQuiz[]> {
+    return Quiz.find({
+      "sharedWith.user": userId,
+    }).sort({ createdAt: -1 });
+  }
 }

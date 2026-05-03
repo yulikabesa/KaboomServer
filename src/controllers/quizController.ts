@@ -23,7 +23,7 @@ export class QuizController {
   // GET quiz by ID
   static async getQuizById(req: Request, res: Response): Promise<void> {
     try {
-      const quiz = await QuizService.getQuizById(req.params.id);
+      const quiz = await QuizService.getQuizById(req.params.quizId);
       if (!quiz) {
         res.status(StatusCodes.NOT_FOUND).json({
           success: false,
@@ -44,6 +44,38 @@ export class QuizController {
     }
   }
 
+  static async getQuizesByOwner(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const quizzes = await QuizService.getQuizesByOwner(userId);
+
+      res.json(quizzes);
+    } catch (error) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        error: "Failed to fetch quizzes",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  static async getQuizesSharedWith(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const quizzes = await QuizService.getQuizesSharedWith(userId);
+
+      res.json(quizzes);
+    } catch (error) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        error: "Failed to fetch shared quizzes",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
   // UPDATE quiz
   // to do!!
   static async updateQuiz(req: Request, res: Response): Promise<void> {
@@ -53,7 +85,7 @@ export class QuizController {
     const allowedUpdates = ["x", "xx"];
 
     const isValidOperation = updates.every((update) =>
-      allowedUpdates.includes(update)
+      allowedUpdates.includes(update),
     );
 
     if (!isValidOperation) {
@@ -62,14 +94,14 @@ export class QuizController {
     }
 
     try {
-      const quiz = await QuizService.getQuizById(req.params.id);
+      const quiz = await QuizService.getQuizById(req.params.userId);
       if (!quiz) {
         res.status(StatusCodes.NOT_FOUND).json({});
         return;
       }
       updates.forEach(
         (update: AllowedUpdateFields) =>
-          ((quiz as any)[update] = req.body[update])
+          ((quiz as any)[update] = req.body[update]),
       );
       await quiz.save();
       res.json(quiz);
