@@ -6,11 +6,11 @@ import { QuizController } from "../controllers/quizController.ts";
 
 router.post("/", QuizController.createQuiz);
 
-// GET quizss by owner
+// GET quizzes by owner
 
 router.get("/owner/:userId", QuizController.getQuizesByOwner);
 
-// GET quizes share with user
+// GET quizzes shared with user
 
 router.get("/shared/:userId", QuizController.getQuizesSharedWith);
 
