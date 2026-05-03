@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IQuestion {
   questionImage?: string;
@@ -9,10 +9,20 @@ export interface IQuestion {
   scoringWeight: number;
 }
 
+export type Permission = "view" | "edit";
+
+export interface ISharedUser {
+  user: Types.ObjectId;
+  permission: Permission;
+}
+
 export interface IQuiz extends Document {
+  owner: Schema.Types.ObjectId;
   coverImage?: string;
   title: string;
   questions: IQuestion[];
+  tags: string[];
+  sharedWith: ISharedUser[];
   createdAt: Date;
 }
 
@@ -45,6 +55,11 @@ const QuestionSchema = new Schema<IQuestion>({
 
 const QuizSchema = new Schema<IQuiz>(
   {
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     coverImage: {
       type: String,
       // default: ,
@@ -54,7 +69,23 @@ const QuizSchema = new Schema<IQuiz>(
       type: String,
       required: true,
     },
-    questions: [QuestionSchema],
+    questions: {
+      type: [QuestionSchema],
+      required: true,
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    sharedWith: {
+      type: [
+        {
+          user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          permission: { type: String, enum: ["view", "edit"], default: "view" },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );
