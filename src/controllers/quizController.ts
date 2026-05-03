@@ -94,7 +94,7 @@ export class QuizController {
     }
 
     try {
-      const quiz = await QuizService.getQuizById(req.params.userId);
+      const quiz = await QuizService.getQuizById(req.params.quizId);
       if (!quiz) {
         res.status(StatusCodes.NOT_FOUND).json({});
         return;
