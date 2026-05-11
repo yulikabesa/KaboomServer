@@ -136,6 +136,7 @@ export const gameRepository = {
   async getAnswers(pin: string, qIdx: number) {
     const answers: Record<string, UserAnswer> = {};
     const answered = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
+
     for (const userId of answered) {
       const answer = await this.getAnswer(pin, qIdx, userId);
       if (answer) answers[userId] = answer;
@@ -169,6 +170,25 @@ export const gameRepository = {
   async getPlayers(pin: string) {
     return await redisClient.sMembers(redisKeys.players(pin));
   },
+
+  // async updateRanksMulti(pin: string) {
+  //   const players = await this.getPlayers(pin);
+  //   const multi = redisClient.multi();
+
+  //   for (const userId of players) {
+  //     const [player, currentRank]: any = await multi.this
+  //       .getPlayer(pin, userId)
+  //       .this.getRank(pin, userId)
+  //       .exec();
+
+  //     multi.hSet(redisKeys.player(pin, userId), {
+  //       ...player,
+  //       oldRank: player.currentRank,
+  //       currentRank: currentRank || "",
+  //     });
+  //   }
+  //   await multi.exec();
+  // },
 
   async updateRanks(pin: string) {
     const players = await this.getPlayers(pin);
