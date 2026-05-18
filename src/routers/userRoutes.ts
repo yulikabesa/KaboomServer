@@ -20,6 +20,10 @@ router.post("/login", UserController.loginUser);
 
 router.post("/logout", auth as IAuth, UserController.logoutUser);
 
+// Get user
+
+router.get("/search", UserController.searchUsers);
+
 // GET user by ID
 
 router.get("/:id", auth, UserController.getUserById);

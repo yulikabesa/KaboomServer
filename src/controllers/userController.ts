@@ -30,7 +30,7 @@ export class UserController {
     try {
       const user = await User.findByCredentials(
         req.body.email,
-        req.body.password
+        req.body.password,
       );
       if (!user) {
         res
@@ -71,7 +71,7 @@ export class UserController {
         return;
       }
       res.json({
-        success: false,
+        success: true,
         data: { user },
       });
     } catch (error) {
@@ -90,7 +90,7 @@ export class UserController {
     const allowedUpdates = ["name", "email", "password", "personalNumber"];
 
     const isValidOperation = updates.every((update) =>
-      allowedUpdates.includes(update)
+      allowedUpdates.includes(update),
     );
 
     if (!isValidOperation) {
@@ -106,12 +106,47 @@ export class UserController {
       }
       updates.forEach(
         (update: AllowedUpdateFields) =>
-          ((user as any)[update] = req.body[update])
+          ((user as any)[update] = req.body[update]),
       );
       await user.save();
       res.json(user);
     } catch (e) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(e);
+    }
+  }
+
+  static async searchUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const searchTerm = req.query.q;
+
+      if (!searchTerm || typeof searchTerm !== "string") {
+        res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          error: 'Query parameter "q" is required and must be a string.',
+        });
+        return;
+      }
+
+      // Search matching names or emails case-insensitively
+      const users = await User.find({
+        $or: [
+          { name: { $regex: searchTerm, $options: "i" } },
+          { email: { $regex: searchTerm, $options: "i" } },
+        ],
+      })
+        .select("name email")
+        .limit(10); // to change later
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        data: { users },
+      });
+    } catch (error) {
+      console.error("Database search execution failed:", error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Internal server error occurred during query processing.",
+      });
     }
   }
 }
