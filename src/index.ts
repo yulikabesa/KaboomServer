@@ -3,6 +3,7 @@ import "dotenv/config";
 import "./db/mongoose.ts";
 import userRouter from "./routers/userRoutes.ts";
 import quizRouter from "./routers/quizRoutes.ts";
+import tagRouter from "./routers/tagRoutes.ts";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
@@ -21,6 +22,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/user", userRouter);
 app.use("/quiz", quizRouter);
+app.use("/tag", tagRouter);
 
 const port = process.env.PORT || 3000;
 
