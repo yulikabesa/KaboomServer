@@ -29,4 +29,9 @@ export class QuizService {
       .populate("sharedWith.user", "name email")
       .sort({ createdAt: -1 });
   }
+
+  // find and delete quiz
+  static async deleteQuizById(userId: string): Promise<IQuiz[] | null> {
+    return await Quiz.findByIdAndDelete(userId);
+  }
 }

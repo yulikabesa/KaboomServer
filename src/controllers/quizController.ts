@@ -27,7 +27,7 @@ export class QuizController {
       if (!quiz) {
         res.status(StatusCodes.NOT_FOUND).json({
           success: false,
-          error: "quiz does exist",
+          error: "quiz does not exist",
         });
         return;
       }
@@ -105,6 +105,22 @@ export class QuizController {
       );
       await quiz.save();
       res.json(quiz);
+    } catch (e) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(e);
+    }
+  }
+
+  static async deleteQuizById(req: Request, res: Response): Promise<void> {
+    try {
+      const quiz = await QuizService.deleteQuizById(req.params.quizId);
+      if (!quiz) {
+        res.status(StatusCodes.NOT_FOUND).json({
+          success: false,
+          error: "Quiz does not exist",
+        });
+        return;
+      }
+      res.send(quiz);
     } catch (e) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(e);
     }

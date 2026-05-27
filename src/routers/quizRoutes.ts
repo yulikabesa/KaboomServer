@@ -22,4 +22,8 @@ router.patch("/update/:quizId", QuizController.updateQuiz);
 
 router.get("/:quizId", QuizController.getQuizById);
 
+// delete by id
+
+router.delete('/:quizId', QuizController.deleteQuizById);
+
 export default router;
