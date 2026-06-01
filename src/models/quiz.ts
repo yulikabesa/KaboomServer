@@ -81,7 +81,7 @@ const QuizSchema = new Schema<IQuiz>(
       type: [
         {
           user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-          permission: { type: String, enum: ["view", "edit"], default: "view" },
+          permission: { type: String, enum: ["צפייה", "עריכה"], default: "צפייה" },
         },
       ],
       default: [],
