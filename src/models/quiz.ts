@@ -9,7 +9,7 @@ export interface IQuestion {
   scoringWeight: number;
 }
 
-export type Permission = "view" | "edit";
+export type Permission = "צפייה" | "עריכה";
 
 export interface ISharedUser {
   user: Types.ObjectId;

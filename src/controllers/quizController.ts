@@ -77,34 +77,43 @@ export class QuizController {
   }
 
   // UPDATE quiz
-  // to do!!
   static async updateQuiz(req: Request, res: Response): Promise<void> {
-    // todo add the fields
-    type AllowedUpdateFields = "x" | "xxx";
-    const updates = Object.keys(req.body) as AllowedUpdateFields[];
-    const allowedUpdates = ["x", "xx"];
+    const allowedUpdates = [
+      "coverImage",
+      "title",
+      "questions",
+      "sharedWith",
+      "tags",
+    ] as const;
 
-    const isValidOperation = updates.every((update) =>
-      allowedUpdates.includes(update),
+    type AllowedUpdateFields = (typeof allowedUpdates)[number];
+    const updates = Object.keys(req.body);
+
+    const isValidOperation = updates.every((field) =>
+      allowedUpdates.includes(field as AllowedUpdateFields),
     );
 
     if (!isValidOperation) {
-      res.status(400).json({ error: "Invalid updates! " });
+      res
+        .status(StatusCodes.BAD_REQUEST)
+        .json({ error: "Invalid updates fields" });
       return;
     }
 
     try {
       const quiz = await QuizService.getQuizById(req.params.quizId);
       if (!quiz) {
-        res.status(StatusCodes.NOT_FOUND).json({});
+        res.status(StatusCodes.NOT_FOUND).json({
+          error: "Quiz not found",
+        });
         return;
       }
-      updates.forEach(
-        (update: AllowedUpdateFields) =>
-          ((quiz as any)[update] = req.body[update]),
-      );
+      updates.forEach((field) => {
+        (quiz as any)[field] = req.body[field];
+      });
+
       await quiz.save();
-      res.json(quiz);
+      res.status(StatusCodes.OK).json(quiz);
     } catch (e) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(e);
     }

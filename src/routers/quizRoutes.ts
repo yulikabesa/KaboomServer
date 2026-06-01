@@ -16,7 +16,7 @@ router.get("/shared/:userId", QuizController.getQuizesSharedWith);
 
 // UPDATE quiz (for editing)
 
-router.patch("/update/:quizId", QuizController.updateQuiz);
+router.patch("/:quizId", QuizController.updateQuiz);
 
 // GET quiz by ID
 
