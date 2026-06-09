@@ -28,6 +28,39 @@ export const gameRepository = {
     });
   },
 
+  // Saves meta + all questions in a single pipeline (one round-trip)
+  async createSession(
+    pin: string,
+    quizId: string,
+    host: string,
+    questions: GameQuestion[],
+  ) {
+    const pipeline = redisClient.multi();
+
+    pipeline.hSet(redisKeys.meta(pin), {
+      quizId,
+      host,
+      state: "lobby",
+      phase: "lobby",
+      currentQuestion: 0,
+      questionCount: questions.length,
+    });
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      pipeline.hSet(redisKeys.question(pin, i), {
+        questionImage: q.questionImage ?? "",
+        questionText: q.questionText,
+        answerOptions: JSON.stringify(q.answerOptions),
+        correctIndexes: JSON.stringify(q.correctIndexes),
+        timeLimit: q.timeLimit || 10,
+        scoringWeight: q.scoringWeight,
+      });
+    }
+
+    await pipeline.exec();
+  },
+
   async setMeta(pin: string, updates: Partial<GameMeta>) {
     await redisClient.hSet(redisKeys.meta(pin), updates);
   },

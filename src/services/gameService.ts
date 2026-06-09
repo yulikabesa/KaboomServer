@@ -7,26 +7,36 @@ const generatePin = () =>
 
 export const gameService = {
   async createGameSession(quizId: string, userId: string) {
-    const quiz = await QuizService.getQuizById(quizId);
-    if (!quiz) {
-      throw new Error("Quiz not found");
-    }
+    const findFreePin = async () => {
+      let pin = generatePin();
+      while (await gameRepository.getMeta(pin)) {
+        pin = generatePin();
+      }
+      return pin;
+    };
 
-    let pin = generatePin();
-    while (await gameRepository.getMeta(pin)) {
-      pin = generatePin();
-    }
+    // Fetch quiz from MongoDB and find a free PIN at the same time
+    const [quiz, pin] = await Promise.all([
+      QuizService.getQuizById(quizId),
+      findFreePin(),
+    ]);
 
-    await gameRepository.createMeta(pin, quizId, userId, quiz.questions.length);
+    if (!quiz) throw new Error("Quiz not found");
 
-    for (let i = 0; i < quiz.questions.length; i++) {
-      await gameRepository.saveQuestion(pin, i, quiz.questions[i]);
-    }
+    // Save meta + all questions in one pipeline (single round-trip)
+    await gameRepository.createSession(pin, quizId, userId, quiz.questions);
 
     return { pin };
   },
 
   async addPlayer(pin: string, userId: string, nickname: string) {
+    // const MAX_PLAYERS = 75;
+    // const players = await gameRepository.getPlayers(pin);
+    // const playerCount = players ? Object.keys(players).length : 0;
+    // if (playerCount >= MAX_PLAYERS) {
+    //   throw new Error("Game is full");
+    // }
+
     await gameRepository.addPlayer(pin, userId, nickname);
     await gameRepository.initLeaderboard(pin, userId);
 
