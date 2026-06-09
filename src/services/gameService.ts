@@ -41,13 +41,16 @@ export const gameService = {
     });
   },
 
-  async revealAnswers(pin: string) {
+  async revealAnswers(pin: string): Promise<number | null> {
     const meta = await gameRepository.getMetaOrThrow(pin);
-    if (meta.phase !== "question") return;
+    if (meta.phase !== "question") return null;
 
-    await gameRepository.setMeta(pin, {
-      phase: "answers",
-    });
+    const [, question] = await Promise.all([
+      gameRepository.setMeta(pin, { phase: "answers" }),
+      gameRepository.getQuestion(pin, meta.currentQuestion),
+    ]);
+
+    return question?.timeLimit ?? null;
   },
 
   async submitAnswer(pin: string, playerId: string, answer: number[]) {

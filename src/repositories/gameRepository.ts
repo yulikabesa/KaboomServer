@@ -173,30 +173,44 @@ export const gameRepository = {
   },
 
   async updateRanks(pin: string) {
-    const players = (await this.getPlayers(pin)) || {};
-    for (const [userId, player] of Object.entries(players)) {
+    // Fetch both in parallel - leaderboard is already sorted by score descending
+    const [leaderboard, players] = await Promise.all([
+      this.getLeaderboard(pin),
+      this.getPlayers(pin),
+    ]);
+    const playersMap = players || {};
+
+    // Build rank map from sorted leaderboard (index = rank, 0-based)
+    const pipeline = redisClient.multi();
+    leaderboard.forEach((entry, index) => {
+      const userId = entry.value;
+      const player = playersMap[userId];
+      if (!player) return;
       player.oldRank = player.currentRank;
-      player.currentRank = await this.getRank(pin, userId);
-      await redisClient.hSet(
-        redisKeys.players(pin),
-        userId,
-        JSON.stringify(player),
-      );
-    }
+      player.currentRank = index;
+      pipeline.hSet(redisKeys.players(pin), userId, JSON.stringify(player));
+    });
+    await pipeline.exec();
   },
 
   async updateScores(pin: string, qIdx: number) {
-    const question = await this.getQuestionOrThrow(pin, qIdx);
+    const [question, answers] = await Promise.all([
+      this.getQuestionOrThrow(pin, qIdx),
+      this.getAnswers(pin, qIdx),
+    ]);
 
-    const answers = (await this.getAnswers(pin, qIdx)) || {};
-    for (const [userId, answer] of Object.entries(answers)) {
+    const pipeline = redisClient.multi();
+    for (const [userId, answer] of Object.entries(answers || {})) {
       const score = gameEngine.calculateScore(
         question.correctIndexes,
         answer.indexes,
         question.scoringWeight,
       );
-      if (score > 0) await this.incrementScore(pin, userId, score);
+      if (score > 0) {
+        pipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);
+      }
     }
+    await pipeline.exec();
   },
 
   async getRank(pin: string, playerId: string) {
@@ -221,23 +235,23 @@ export const gameRepository = {
     const meta = await this.getMeta(pin);
     if (!meta) return null;
 
-    const players = (await this.getPlayers(pin)) || {};
-    const leaderboard = gameEngine.mapLeaderboard(
-      await this.getLeaderboard(pin),
-      players,
-    );
+    const [players, rawLeaderboard, question, answers] = await Promise.all([
+      this.getPlayers(pin),
+      this.getLeaderboard(pin),
+      meta.state === "playing"
+        ? this.getQuestion(pin, meta.currentQuestion)
+        : Promise.resolve(null),
+      meta.state === "playing"
+        ? this.getAnswers(pin, meta.currentQuestion)
+        : Promise.resolve(null),
+    ]);
 
-    let question = null;
-    let answers = null;
-
-    if (meta.state === "playing") {
-      question = await this.getQuestion(pin, meta.currentQuestion);
-      answers = await this.getAnswers(pin, meta.currentQuestion);
-    }
+    const playersMap = players || {};
+    const leaderboard = gameEngine.mapLeaderboard(rawLeaderboard, playersMap);
 
     return {
       meta,
-      players,
+      players: playersMap,
       leaderboard,
       question,
       answers,

@@ -146,6 +146,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
+            questionText: question?.questionText,
             answerOptions: question?.answerOptions,
             correctAnswers: question?.correctIndexes,
             distribution: this.buildDistribution(

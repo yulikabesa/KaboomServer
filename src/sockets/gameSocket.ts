@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { gameRepository } from "../repositories/gameRepository";
 import { gameService } from "../services/gameService";
 import { gameEngine } from "../engine/gameEngine";
+import { questionTimer } from "../timers/questionTimer";
 
 // todo: decide -> payload.pin / socket.data.pin
 const hostOnly =
@@ -85,29 +86,47 @@ const handlers = {
   },
 
   "reveal-answers": async (payload: any, socket: Socket, io: Server) => {
-    await gameService.revealAnswers(socket.data.pin);
-    await emitGameState(io, socket.data.pin); // phase is "answers"
+    const pin = socket.data.pin;
+    const timeLimit = await gameService.revealAnswers(pin);
+
+    if (timeLimit !== null) {
+      questionTimer.set(pin, timeLimit * 1000, async () => {
+        try {
+          await gameService.endQuestion(pin);
+          await emitGameState(io, pin);
+        } catch {
+          // question was already ended manually
+        }
+      });
+    }
+
+    await emitGameState(io, pin); // phase is "answers"
   },
 
   "submit-answer": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
+    const pin = socket.data.pin;
 
-    await gameService.submitAnswer(socket.data.pin, userId, payload.answer);
-    // socket.emit("answer-received");
+    await gameService.submitAnswer(pin, userId, payload.answer);
 
-    const progress = await gameService.getAnswerProgress(socket.data.pin);
-    const hostUserId = await gameService.getHost(socket.data.pin);
+    const [progress, hostUserId] = await Promise.all([
+      gameService.getAnswerProgress(pin),
+      gameService.getHost(pin),
+    ]);
     io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
 
-    const state = await gameRepository.getFullState(socket.data.pin);
-    if (state) {
-      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
-      io.to(`user:${userId}`).emit("game-state", personalView);
-    }
+    const allAnswered = progress.answered === progress.totalPlayers;
 
-    if (progress.answered === progress.totalPlayers) {
-      await gameService.endQuestion(socket.data.pin);
-      await emitGameState(io, socket.data.pin); // phase is "results"
+    if (allAnswered) {
+      questionTimer.clear(pin); // all players answered, server timer no longer needed
+      await gameService.endQuestion(pin);
+      await emitGameState(io, pin);
+    } else {
+      const state = await gameRepository.getFullState(pin);
+      if (state) {
+        const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+        io.to(`user:${userId}`).emit("game-state", personalView);
+      }
     }
   },
 
@@ -119,6 +138,7 @@ const handlers = {
   ),
 
   "end-question": hostOnly(async (payload: any, socket: Socket, io: Server) => {
+    questionTimer.clear(socket.data.pin); // cancel server timer if host ends early
     await gameService.endQuestion(socket.data.pin);
     await emitGameState(io, socket.data.pin); // phase is "results"
   }),
