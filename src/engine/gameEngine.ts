@@ -63,10 +63,11 @@ export const gameEngine = {
     const { meta, question, players, answers, leaderboard } = gameState;
     const playerAnswer = answers?.[userId];
     const currentRank = players[userId].currentRank;
-    const score = currentRank !== null ? leaderboard[currentRank].score : 0;
+    const score =
+      currentRank !== null ? (leaderboard[currentRank]?.score ?? 0) : 0;
     const rankAbove =
       currentRank !== null && currentRank !== 0
-        ? leaderboard[currentRank - 1].nickname
+        ? (leaderboard[currentRank - 1]?.nickname ?? null)
         : null;
 
     switch (meta.phase) {
