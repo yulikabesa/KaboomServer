@@ -2,11 +2,13 @@ import { GameFullState, Player, UserAnswer } from "../types/game";
 
 export const gameEngine = {
   isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
-    const correctSet = new Set(correctIndexes);
-    return (
-      playerAnswer.length === correctSet.size &&
-      playerAnswer.every((i) => correctSet.has(i))
-    );
+    // const correctSet = new Set(correctIndexes);
+    // return (
+    //   playerAnswer.length === correctSet.size &&
+    //   playerAnswer.every((i) => correctSet.has(i))
+    // );
+
+    return correctIndexes.includes(playerAnswer[0]);
   },
 
   calculateScore(
@@ -37,6 +39,10 @@ export const gameEngine = {
     return leaderboard.map((p) => ({
       nickname: players[p.value].nickname,
       score: p.score,
+      rankChange: Math.sign(
+        // 1 is UP, -1 is DOWN, 0 is UNCHANGED
+        players[p.value].oldRank - players[p.value].currentRank,
+      ),
     }));
   },
 
@@ -139,7 +145,7 @@ export const gameEngine = {
             timeLimit: question?.timeLimit,
             scoringWeight: question?.scoringWeight,
             answeredCount: answers ? Object.keys(answers).length : 0,
-            questionImage: question?.questionImage
+            questionImage: question?.questionImage,
           },
         };
 

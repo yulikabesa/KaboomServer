@@ -86,8 +86,8 @@ export const gameRepository = {
   async addPlayer(pin: string, userId: string, nickname: string) {
     const player = {
       nickname,
-      oldRank: null,
-      currentRank: null,
+      oldRank: 0,
+      currentRank: 0,
     };
 
     await redisClient.hSet(
