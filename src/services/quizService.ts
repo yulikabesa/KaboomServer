@@ -11,7 +11,7 @@ export class QuizService {
 
   // GET quiz by id
   static async getQuizById(id: string): Promise<IQuiz | null> {
-    return Quiz.findById(id);
+    return Quiz.findById(id).populate("sharedWith.user", "name email");
   }
 
   // GET quizes by owner
