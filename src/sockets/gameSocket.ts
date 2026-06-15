@@ -26,20 +26,20 @@ export const emitGameState = async (io: Server, pin: string) => {
   const sharedView = gameEngine.buildSharedPlayerView(state);
   if (sharedView.data) {
     io.to(`game:${pin}`)
-      .except(`user:${hostId}`)
+      .except(`user:${hostId}:game:${pin}`)
       .emit("game-state", sharedView);
   } else {
     for (const userId of Object.keys(state.players)) {
       // if (userId === hostId) continue;
 
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);
-      io.to(`user:${userId}`).emit("game-state", personalView);
+      io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
     }
   }
 
   // Host view
   const hostView = gameEngine.buildHostView(state);
-  io.to(`user:${hostId}`).emit("game-state", hostView);
+  io.to(`user:${hostId}:game:${pin}`).emit("game-state", hostView);
 };
 
 const handlers = {
@@ -47,6 +47,7 @@ const handlers = {
     const userId = socket.data.userId;
     const game = await gameService.createGameSession(payload.quizId, userId);
     socket.join(`game:${game.pin}`);
+    socket.join(`user:${userId}:game:${game.pin}`);
     socket.data.pin = game.pin;
 
     // save connection
@@ -62,22 +63,28 @@ const handlers = {
     );
 
     socket.join(`game:${payload.pin}`);
+    socket.join(`user:${userId}:game:${payload.pin}`);
     socket.data.pin = payload.pin;
 
     const hostId = await gameRepository.getHost(payload.pin);
-    io.to(`user:${hostId}`).emit("player-joined", player);
+    io.to(`user:${hostId}:game:${payload.pin}`).emit("player-joined", player);
 
     // todo: change game state emission and decide if joining game should always be allowed
     const state = await gameRepository.getFullState(socket.data.pin);
     if (state) {
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);
-      io.to(`user:${userId}`).emit("game-state", personalView);
+      io.to(`user:${userId}:game:${socket.data.pin}`).emit(
+        "game-state",
+        personalView,
+      );
     }
   },
 
   "start-game": hostOnly(async (payload: any, socket: Socket, io: Server) => {
     await gameService.startGame(socket.data.pin);
-    io.to(`user:${socket.data.userId}`).emit("game-started");
+    io.to(`user:${socket.data.userId}:game:${socket.data.pin}`).emit(
+      "game-started",
+    );
     // await emitGameState(io, socket.data.pin); // phase is "question"
   }),
 
@@ -113,7 +120,10 @@ const handlers = {
       gameService.getAnswerProgress(pin),
       gameService.getHost(pin),
     ]);
-    io.to(`user:${hostUserId}`).emit("answer-progress", progress.answered);
+    io.to(`user:${hostUserId}:game:${pin}`).emit(
+      "answer-progress",
+      progress.answered,
+    );
 
     const allAnswered = progress.answered === progress.totalPlayers;
 
@@ -125,7 +135,7 @@ const handlers = {
       const state = await gameRepository.getFullState(pin);
       if (state) {
         const personalView = gameEngine.buildPersonalPlayerView(state, userId);
-        io.to(`user:${userId}`).emit("game-state", personalView);
+        io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
       }
     }
   },

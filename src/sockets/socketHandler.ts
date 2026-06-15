@@ -40,6 +40,7 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
 
   socket.data.pin = pin;
   socket.join(`game:${pin}`);
+  socket.join(`user:${userId}:game:${pin}`);
 
   // Restore state
   socket.emit("game-state", playerState);
