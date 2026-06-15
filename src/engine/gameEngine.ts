@@ -120,11 +120,23 @@ export const gameEngine = {
   },
 
   buildHostView(gameState: GameFullState) {
-    const { meta, leaderboard, question, answers } = gameState;
+    const { meta, players, leaderboard, question, answers } = gameState;
     const LEADERBOARD_LIMIT = 6;
     const PODIUM_LIMIT = 5;
 
     switch (meta.phase) {
+      case "lobby":
+        return {
+          phase: meta.phase,
+          data: {
+            quizId: meta.quizId,
+            players: Object.entries(players).map(([id, p]) => ({
+              id,
+              nickname: p.nickname,
+            })),
+          },
+        };
+
       case "question":
         return {
           phase: meta.phase,
