@@ -162,6 +162,24 @@ const handlers = {
     const data = await gameService.validatePin(payload.pin);
     socket.emit(data.success ? "pin-valid" : "pin-error", data.error);
   },
+
+  "check-game-role": async (payload: any, socket: Socket) => {
+    const userId = socket.data.userId;
+    const pin = payload?.pin;
+    if (!pin) return;
+
+    const meta = await gameRepository.getMeta(pin);
+    if (!meta) {
+      socket.emit("game-role", { pin, role: null });
+      return;
+    }
+    if (meta.host === userId) {
+      socket.emit("game-role", { pin, role: "host" });
+      return;
+    }
+    const player = await gameRepository.getPlayer(pin, userId);
+    socket.emit("game-role", { pin, role: player ? "player" : null });
+  },
 };
 
 type HandlerKeys = keyof typeof handlers;

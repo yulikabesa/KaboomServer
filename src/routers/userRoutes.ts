@@ -1,9 +1,8 @@
-/// <reference path="../types/express.d.ts" />
 import express from "express";
-const router = express.Router();
 import { auth } from "../middleware/auth.ts";
 import { UserController } from "../controllers/userController.ts";
-import type { IAuth } from "../types/request.ts";
+
+const router = express.Router();
 
 // sign up
 // POST create new user
@@ -18,18 +17,18 @@ router.post("/login", UserController.loginUser);
 // logout
 // POST logout user
 
-router.post("/logout", auth as IAuth, UserController.logoutUser);
+router.post("/logout", auth, UserController.logoutUser);
 
 // Get user
 
-router.get("/search", UserController.searchUsers);
+router.get("/search", auth, UserController.searchUsers);
 
 // GET user by ID
 
-router.get("/:id", auth, UserController.getUserById);
+// router.get("/:id", auth, UserController.getUserById);
 
 // UPDATE user
 
-router.patch("/update/:id", auth, UserController.updateUser);
+// router.patch("/update/:id", auth, UserController.updateUser);
 
 export default router;

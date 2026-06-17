@@ -15,14 +15,14 @@ export class QuizService {
   }
 
   // GET quizes by owner
-  static async getQuizesByOwner(ownerId: string): Promise<IQuiz[]> {
+  static async getOwnedQuizzes(ownerId: string): Promise<IQuiz[]> {
     return Quiz.find({ owner: ownerId })
       .populate("sharedWith.user", "name email")
       .sort({ createdAt: -1 });
   }
 
   // GET quizes shared with user
-  static async getQuizesSharedWith(userId: string): Promise<IQuiz[]> {
+  static async getSharedQuizzes(userId: string): Promise<IQuiz[]> {
     return Quiz.find({
       "sharedWith.user": userId,
     })
@@ -31,7 +31,7 @@ export class QuizService {
   }
 
   // find and delete quiz
-  static async deleteQuizById(userId: string): Promise<IQuiz[] | null> {
+  static async deleteQuiz(userId: string): Promise<IQuiz[] | null> {
     return await Quiz.findByIdAndDelete(userId);
   }
 }

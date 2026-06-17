@@ -64,11 +64,11 @@ export const initSocket = (io: Server) => {
     console.log(`User connected: ${userId} (${socket.id})`);
     socket.join(`user:${userId}`);
 
+    gameSocket(io, socket);
+
     if (pin) {
       await handleJoinGame(socket, userId, pin);
     }
-
-    gameSocket(io, socket);
 
     socket.on("disconnect", () => {
       handleDisconnect(io, socket);

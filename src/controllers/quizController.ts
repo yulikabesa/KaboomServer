@@ -1,12 +1,19 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { QuizService } from "../services/quizService.ts";
+import type { IUserRequest } from "../types/request.ts";
+import type { IQuizRequest } from "../middleware/quizAccess.ts";
+
+const getRequestorId = (req: IUserRequest) => req.user!._id.toString();
 
 export class QuizController {
   // POST create new quiz
-  static async createQuiz(req: Request, res: Response): Promise<void> {
+  static async createQuiz(req: IUserRequest, res: Response): Promise<void> {
     try {
-      const quiz = await QuizService.createQuiz(req.body);
+      const quiz = await QuizService.createQuiz({
+        ...req.body,
+        owner: getRequestorId(req),
+      });
       res.status(StatusCodes.CREATED).json({
         success: true,
         data: { quiz },
@@ -21,35 +28,19 @@ export class QuizController {
   }
 
   // GET quiz by ID
-  static async getQuizById(req: Request, res: Response): Promise<void> {
-    try {
-      const quiz = await QuizService.getQuizById(req.params.quizId);
-      if (!quiz) {
-        res.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          error: "quiz does not exist",
-        });
-        return;
-      }
-      res.json({
-        success: false,
-        data: { quiz },
-      });
-    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        error: "Failed to find quiz",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+  static async getQuizById(req: IQuizRequest, res: Response): Promise<void> {
+    res.json({
+      success: true,
+      data: { quiz: req.quiz },
+    });
   }
 
-  static async getQuizesByOwner(req: Request, res: Response): Promise<void> {
+  static async getOwnedQuizzes(
+    req: IUserRequest,
+    res: Response,
+  ): Promise<void> {
     try {
-      const { userId } = req.params;
-
-      const quizzes = await QuizService.getQuizesByOwner(userId);
-
+      const quizzes = await QuizService.getOwnedQuizzes(getRequestorId(req));
       res.json(quizzes);
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -60,12 +51,12 @@ export class QuizController {
     }
   }
 
-  static async getQuizesSharedWith(req: Request, res: Response): Promise<void> {
+  static async getSharedQuizzes(
+    req: IUserRequest,
+    res: Response,
+  ): Promise<void> {
     try {
-      const { userId } = req.params;
-
-      const quizzes = await QuizService.getQuizesSharedWith(userId);
-
+      const quizzes = await QuizService.getSharedQuizzes(getRequestorId(req));
       res.json(quizzes);
     } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -77,7 +68,7 @@ export class QuizController {
   }
 
   // UPDATE quiz
-  static async updateQuiz(req: Request, res: Response): Promise<void> {
+  static async updateQuiz(req: IQuizRequest, res: Response): Promise<void> {
     const allowedUpdates = [
       "coverImage",
       "title",
@@ -101,13 +92,7 @@ export class QuizController {
     }
 
     try {
-      const quiz = await QuizService.getQuizById(req.params.quizId);
-      if (!quiz) {
-        res.status(StatusCodes.NOT_FOUND).json({
-          error: "Quiz not found",
-        });
-        return;
-      }
+      const quiz = req.quiz!;
       updates.forEach((field) => {
         (quiz as any)[field] = req.body[field];
       });
@@ -119,17 +104,10 @@ export class QuizController {
     }
   }
 
-  static async deleteQuizById(req: Request, res: Response): Promise<void> {
+  static async deleteQuiz(req: IQuizRequest, res: Response): Promise<void> {
     try {
-      const quiz = await QuizService.deleteQuizById(req.params.quizId);
-      if (!quiz) {
-        res.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          error: "Quiz does not exist",
-        });
-        return;
-      }
-      res.send(quiz);
+      const deleted = await QuizService.deleteQuiz(req.params.quizId);
+      res.send(deleted);
     } catch (e) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(e);
     }
