@@ -14,6 +14,7 @@ export interface IUser extends Document {
   email: string;
   personalNumber: string;
   password: string;
+  // todo: remove isAdmin
   isAdmin: boolean;
   tokens: TokenType[];
   generateAuthToken: () => Promise<string>;

@@ -12,12 +12,18 @@ export interface IQuestion {
 export type Permission = "צפייה" | "עריכה";
 
 export interface ISharedUser {
-  user: Types.ObjectId;
+  user: QuizUser | Types.ObjectId;
   permission: Permission;
 }
 
+export interface QuizUser {
+  _id: Types.ObjectId;
+  name: string;
+  email: string;
+}
+
 export interface IQuiz extends Document {
-  owner: Schema.Types.ObjectId;
+  owner: QuizUser | Types.ObjectId;
   coverImage?: string;
   title: string;
   questions: IQuestion[];

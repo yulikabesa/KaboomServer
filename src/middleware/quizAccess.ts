@@ -30,13 +30,12 @@ export const requireQuizAccess =
       }
 
       const userId = req.user!._id.toString();
-      const isOwner = quiz.owner.toString() === userId;
+      const isOwner = quiz.owner._id.toString() === userId;
       const permission = getUserPermission(quiz, userId);
 
       let allowed = false;
       if (level === "view") allowed = isOwner || !!permission;
-      else if (level === "edit")
-        allowed = isOwner || permission === "עריכה";
+      else if (level === "edit") allowed = isOwner || permission === "עריכה";
       else if (level === "owner") allowed = isOwner;
 
       if (!allowed) {

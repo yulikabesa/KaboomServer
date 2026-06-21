@@ -70,6 +70,7 @@ export class UserController {
         });
         return;
       }
+      
       res.json({
         success: true,
         data: { user },

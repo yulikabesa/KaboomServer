@@ -37,6 +37,7 @@ export const gameEngine = {
 
   mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
     return leaderboard.map((p) => ({
+      // nickname: players[p.value].nickname ?? "",
       nickname: players[p.value].nickname,
       score: p.score,
       rankChange: Math.sign(
