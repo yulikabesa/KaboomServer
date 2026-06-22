@@ -26,6 +26,7 @@ export interface GameMeta {
   phase: GamePhase;
   currentQuestion: number;
   questionCount: number;
+  questionStartedAt?: number;
 }
 
 export interface GameQuestion {

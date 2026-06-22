@@ -76,6 +76,10 @@ export const gameRepository = {
       phase: meta.phase as GamePhase,
       currentQuestion: Number(meta.currentQuestion),
       questionCount: Number(meta.questionCount),
+      questionStartedAt:
+        meta.questionStartedAt !== undefined
+          ? Number(meta.questionStartedAt)
+          : undefined,
     };
   },
 
@@ -226,7 +230,7 @@ export const gameRepository = {
     await pipeline.exec();
   },
 
-  async updateScores(pin: string, qIdx: number) {
+  async updateScores(pin: string, qIdx: number, startedAt: number) {
     const [question, answers] = await Promise.all([
       this.getQuestionOrThrow(pin, qIdx),
       this.getAnswers(pin, qIdx),
@@ -234,10 +238,14 @@ export const gameRepository = {
 
     const pipeline = redisClient.multi();
     for (const [userId, answer] of Object.entries(answers || {})) {
+      const timeTakenSec =
+        startedAt > 0 ? Math.max(0, (answer.answeredAt - startedAt) / 1000) : 0;
       const score = gameEngine.calculateScore(
         question.correctIndexes,
         answer.indexes,
         question.scoringWeight,
+        timeTakenSec,
+        question.timeLimit,
       );
       if (score > 0) {
         pipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);

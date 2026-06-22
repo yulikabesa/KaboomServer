@@ -15,12 +15,17 @@ export const gameEngine = {
     correctIndexes: number[],
     playerAnswer: number[],
     scoringWeight: number,
+    timeTakenSec: number,
+    timeLimitSec: number,
   ) {
-    const SCORE = 1000;
-    if (this.isAnswerCorrect(correctIndexes, playerAnswer)) {
-      return SCORE * scoringWeight;
-    }
-    return 0;
+    if (!this.isAnswerCorrect(correctIndexes, playerAnswer)) return 0;
+
+    const baseScore = 1000 * scoringWeight;
+    if (timeLimitSec <= 0) return baseScore;
+
+    // full points when time starts, half points when time ends.
+    const ratio = Math.min(Math.max(timeTakenSec / timeLimitSec, 0), 1);
+    return Math.round(baseScore * (1 - 0.5 * ratio));
   },
 
   buildDistribution(answers: Record<string, UserAnswer>, answerCount: number) {

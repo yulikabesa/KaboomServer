@@ -56,7 +56,10 @@ export const gameService = {
     if (meta.phase !== "question") return null;
 
     const [, question] = await Promise.all([
-      gameRepository.setMeta(pin, { phase: "answers" }),
+      gameRepository.setMeta(pin, {
+        phase: "answers",
+        questionStartedAt: Date.now(),
+      }),
       gameRepository.getQuestion(pin, meta.currentQuestion),
     ]);
 
@@ -77,7 +80,7 @@ export const gameService = {
 
     const qIdx = meta.currentQuestion;
 
-    await gameRepository.updateScores(pin, qIdx);
+    await gameRepository.updateScores(pin, qIdx, meta.questionStartedAt ?? 0);
     await gameRepository.updateRanks(pin);
     await gameRepository.setMeta(pin, { phase: "results" });
   },
