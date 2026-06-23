@@ -157,15 +157,16 @@ export const gameService = {
       return { success: false, error: "Failed to find game" };
     }
 
-    // format state for this player
+    const role: "host" | "player" = meta.host === userId ? "host" : "player";
     const playerView =
-      meta.host === userId
+      role === "host"
         ? gameEngine.buildHostView(gameState)
         : gameEngine.buildPersonalPlayerView(gameState, userId);
 
     return {
       success: true,
       playerState: playerView,
+      role,
     };
   },
 };
