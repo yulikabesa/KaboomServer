@@ -45,7 +45,7 @@ export const gameService = {
 
   async startGame(pin: string) {
     await gameRepository.setMeta(pin, {
-      state: "playing",
+      state: "active",
       currentQuestion: 0,
       phase: "question",
     });
@@ -112,6 +112,7 @@ export const gameService = {
 
     if (next >= meta.questionCount) {
       await gameRepository.setMeta(pin, {
+        state: "ended",
         phase: "podium",
       });
     } else {
@@ -134,7 +135,7 @@ export const gameService = {
     const meta = await gameRepository.getMeta(pin);
     if (!meta) {
       return { success: false, error: "Invalid pin" };
-    } else if (meta.state === "finished") {
+    } else if (meta.state === "ended") {
       return { success: false, error: "Game has ended" };
     } else {
       return { success: true, error: null };

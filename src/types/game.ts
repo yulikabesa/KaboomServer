@@ -1,4 +1,4 @@
-export type GameState = "lobby" | "playing" | "finished";
+export type GameState = "created" | "active" | "ended";
 
 export type GamePhase =
   | "lobby"

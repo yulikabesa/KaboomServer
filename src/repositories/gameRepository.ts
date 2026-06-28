@@ -21,7 +21,7 @@ export const gameRepository = {
     await redisClient.hSet(redisKeys.meta(pin), {
       quizId,
       host,
-      state: "lobby",
+      state: "created",
       phase: "lobby",
       currentQuestion: 0,
       questionCount,
@@ -40,7 +40,7 @@ export const gameRepository = {
     pipeline.hSet(redisKeys.meta(pin), {
       quizId,
       host,
-      state: "lobby",
+      state: "created",
       phase: "lobby",
       currentQuestion: 0,
       questionCount: questions.length,
@@ -279,10 +279,10 @@ export const gameRepository = {
     const [players, rawLeaderboard, question, answers] = await Promise.all([
       this.getPlayers(pin),
       this.getLeaderboard(pin),
-      meta.state === "playing"
+      meta.state === "active"
         ? this.getQuestion(pin, meta.currentQuestion)
         : Promise.resolve(null),
-      meta.state === "playing"
+      meta.state === "active"
         ? this.getAnswers(pin, meta.currentQuestion)
         : Promise.resolve(null),
     ]);
