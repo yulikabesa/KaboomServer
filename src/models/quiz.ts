@@ -39,7 +39,7 @@ const QuestionSchema = new Schema<IQuestion>({
   },
   questionText: {
     type: String,
-    required: true,
+    default: "",
   },
   answerOptions: {
     type: [String],
@@ -87,7 +87,11 @@ const QuizSchema = new Schema<IQuiz>(
       type: [
         {
           user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-          permission: { type: String, enum: ["צפייה", "עריכה"], default: "צפייה" },
+          permission: {
+            type: String,
+            enum: ["צפייה", "עריכה"],
+            default: "צפייה",
+          },
         },
       ],
       default: [],
