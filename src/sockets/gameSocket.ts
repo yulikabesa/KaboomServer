@@ -88,8 +88,17 @@ const handlers = {
     // await emitGameState(io, socket.data.pin); // phase is "question"
   }),
 
-  "get-game-state": async (payload: any, socket: Socket, io: Server) => {
-    await emitGameState(io, socket.data.pin);
+  "get-game-state": async (payload: any, socket: Socket) => {
+    const pin = socket.data.pin;
+    const state = await gameRepository.getFullState(pin);
+    if (!state) return;
+
+    const userId = socket.data.userId;
+    if (userId === state.meta.host) {
+      socket.emit("game-state", gameEngine.buildHostView(state));
+    } else {
+      socket.emit("game-state", gameEngine.buildPersonalPlayerView(state, userId));
+    }
   },
 
   "reveal-answers": async (payload: any, socket: Socket, io: Server) => {
