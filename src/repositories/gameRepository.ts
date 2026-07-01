@@ -11,23 +11,9 @@ import {
   Player,
 } from "../types/game";
 
-export const gameRepository = {
-  async createMeta(
-    pin: string,
-    quizId: string,
-    host: string,
-    questionCount: number,
-  ) {
-    await redisClient.hSet(redisKeys.meta(pin), {
-      quizId,
-      host,
-      state: "created",
-      phase: "lobby",
-      currentQuestion: 0,
-      questionCount,
-    });
-  },
+let EXPIRE = 60 * 60 * 3;
 
+export const gameRepository = {
   // Saves meta + all questions in a single pipeline (one round-trip)
   async createSession(
     pin: string,
@@ -45,6 +31,7 @@ export const gameRepository = {
       currentQuestion: 0,
       questionCount: questions.length,
     });
+    pipeline.expire(redisKeys.meta(pin), EXPIRE);
 
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -56,6 +43,7 @@ export const gameRepository = {
         timeLimit: q.timeLimit || 10,
         scoringWeight: q.scoringWeight,
       });
+      pipeline.expire(redisKeys.question(pin, i), EXPIRE);
     }
 
     await pipeline.exec();
@@ -94,16 +82,18 @@ export const gameRepository = {
       currentRank: 0,
     };
 
-    await redisClient.hSet(
-      redisKeys.players(pin),
-      userId,
-      JSON.stringify(player),
-    );
+    await Promise.all([
+      redisClient.hSet(redisKeys.players(pin), userId, JSON.stringify(player)),
+      redisClient.expire(redisKeys.players(pin), EXPIRE, "NX"),
+    ]);
   },
 
   async initLeaderboard(pin: string, playerId: string) {
-    await redisClient.zAdd(redisKeys.leaderboard(pin), [
-      { score: 0, value: playerId },
+    await Promise.all([
+      redisClient.zAdd(redisKeys.leaderboard(pin), [
+        { score: 0, value: playerId },
+      ]),
+      redisClient.expire(redisKeys.leaderboard(pin), EXPIRE, "NX"),
     ]);
   },
 
@@ -118,17 +108,6 @@ export const gameRepository = {
       -1,
       { REV: true },
     );
-  },
-
-  async saveQuestion(pin: string, index: number, q: GameQuestion) {
-    await redisClient.hSet(redisKeys.question(pin, index), {
-      questionImage: q.questionImage ?? "",
-      questionText: q.questionText,
-      answerOptions: JSON.stringify(q.answerOptions),
-      correctIndexes: JSON.stringify(q.correctIndexes),
-      timeLimit: q.timeLimit || 10,
-      scoringWeight: q.scoringWeight,
-    });
   },
 
   async getQuestion(pin: string, index: number): Promise<GameQuestion | null> {
@@ -156,11 +135,14 @@ export const gameRepository = {
       answeredAt: Date.now(),
     };
 
-    return await redisClient.hSetNX(
-      redisKeys.answers(pin, qIdx),
-      playerId,
-      JSON.stringify(answer),
-    );
+    await Promise.all([
+      redisClient.hSetNX(
+        redisKeys.answers(pin, qIdx),
+        playerId,
+        JSON.stringify(answer),
+      ),
+      redisClient.expire(redisKeys.answers(pin, qIdx), EXPIRE, "NX"),
+    ]);
   },
 
   async getAnswers(pin: string, qIdx: number) {
