@@ -85,7 +85,7 @@ const handlers = {
     io.to(`user:${socket.data.userId}:game:${socket.data.pin}`).emit(
       "game-started",
     );
-    // await emitGameState(io, socket.data.pin); // phase is "question"
+    await emitGameState(io, socket.data.pin); // phase is "question"
   }),
 
   "get-game-state": async (payload: any, socket: Socket) => {
