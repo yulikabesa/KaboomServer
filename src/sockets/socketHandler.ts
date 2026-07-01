@@ -42,7 +42,7 @@ const handleJoinGame = async (socket: Socket, userId: string, pin: string) => {
   }
 
   socket.data.pin = pin;
-  socket.join(`game:${pin}`);
+  if (role === "player") socket.join(`game:${pin}`);
   socket.join(`user:${userId}:game:${pin}`);
 
   socket.emit("game-role", { pin, role });
