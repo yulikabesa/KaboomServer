@@ -153,20 +153,10 @@ export const gameService = {
     if (!meta || !player)
       return { success: false, error: "Invalid game access" };
 
-    const gameState = await gameRepository.getFullState(pin);
-    if (!gameState) {
-      return { success: false, error: "Failed to find game" };
-    }
-
     const role: "host" | "player" = meta.host === userId ? "host" : "player";
-    const playerView =
-      role === "host"
-        ? gameEngine.buildHostView(gameState)
-        : gameEngine.buildPersonalPlayerView(gameState, userId);
 
     return {
       success: true,
-      playerState: playerView,
       role,
     };
   },
