@@ -8,6 +8,7 @@ export type GamePhase =
   | "leaderboard"
   | "podium";
 
+//TODO: CHANGE INDEXES TYPE
 export interface UserAnswer {
   indexes: number[];
   answeredAt: number; // Unix timestamp in ms
@@ -44,4 +45,13 @@ export interface GameFullState {
   leaderboard: { nickname: string; score: number }[];
   question: GameQuestion | null;
   answers: Record<string, UserAnswer> | null;
+}
+
+export interface GamePersonalState {
+  meta: GameMeta;
+  player: Player | null;
+  score: number | null;
+  question: GameQuestion | null;
+  answer: UserAnswer | null;
+  rankAbove: string | null;
 }

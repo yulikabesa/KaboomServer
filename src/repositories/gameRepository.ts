@@ -9,6 +9,7 @@ import {
   GameQuestion,
   UserAnswer,
   Player,
+  GamePersonalState,
 } from "../types/game";
 
 let EXPIRE = 60 * 60 * 3;
@@ -76,15 +77,14 @@ export const gameRepository = {
   },
 
   async addPlayer(pin: string, userId: string, nickname: string) {
-    const player = {
-      nickname,
-      oldRank: 0,
-      currentRank: 0,
-    };
-
     await Promise.all([
-      redisClient.hSet(redisKeys.players(pin), userId, JSON.stringify(player)),
-      redisClient.expire(redisKeys.players(pin), EXPIRE, "NX"),
+      redisClient.sAdd(redisKeys.players(pin), userId),
+      redisClient.hSet(redisKeys.player(pin, userId), {
+        nickname,
+        oldRank: "",
+        currentRank: "",
+      }),
+      redisClient.expire(redisKeys.player(pin, userId), EXPIRE),
     ]);
   },
 
@@ -95,10 +95,6 @@ export const gameRepository = {
       ]),
       redisClient.expire(redisKeys.leaderboard(pin), EXPIRE, "NX"),
     ]);
-  },
-
-  async incrementScore(pin: string, playerId: string, score: number) {
-    await redisClient.zIncrBy(redisKeys.leaderboard(pin), score, playerId);
   },
 
   async getLeaderboard(pin: string) {
@@ -130,35 +126,47 @@ export const gameRepository = {
     playerId: string,
     indexes: number[],
   ) {
-    const answer: UserAnswer = {
-      indexes,
-      answeredAt: Date.now(),
-    };
+    if (await redisClient.sIsMember(redisKeys.answered(pin, qIdx), playerId))
+      return;
 
     await Promise.all([
-      redisClient.hSetNX(
-        redisKeys.answers(pin, qIdx),
-        playerId,
-        JSON.stringify(answer),
-      ),
-      redisClient.expire(redisKeys.answers(pin, qIdx), EXPIRE, "NX"),
+      redisClient.sAdd(redisKeys.answered(pin, qIdx), playerId),
+      redisClient.hSet(redisKeys.answer(pin, qIdx, playerId), {
+        indexes: indexes[0],
+        answeredAt: Date.now(),
+      }),
+      redisClient.expire(redisKeys.answer(pin, qIdx, playerId), EXPIRE),
     ]);
   },
 
+  // TODO: PIPELINE
   async getAnswers(pin: string, qIdx: number) {
-    const answers = await redisClient.hGetAll(redisKeys.answers(pin, qIdx));
-    if (Object.keys(answers).length === 0) return null;
+    const answers: Record<string, UserAnswer> = {};
+    const answered = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
 
-    const answersFormat: Record<string, UserAnswer> = {};
-    for (const [userId, val] of Object.entries(answers)) {
-      answersFormat[userId] = JSON.parse(val);
+    for (const userId of answered) {
+      const answer = await this.getAnswer(pin, qIdx, userId);
+      if (answer) answers[userId] = answer;
     }
+    return answers;
+  },
 
-    return answersFormat;
+  async getAnswer(pin: string, qIdx: number, userId: string) {
+    const answer = await redisClient.hGetAll(
+      redisKeys.answer(pin, qIdx, userId),
+    );
+
+    if (Object.keys(answer).length === 0) return null;
+
+    const indexesArray = answer.indexes?.split("-").map(Number);
+    return {
+      answeredAt: Number(answer.answeredAt),
+      indexes: indexesArray,
+    };
   },
 
   async getAnswerCount(pin: string, qIdx: number) {
-    return await redisClient.hLen(redisKeys.answers(pin, qIdx));
+    return await redisClient.sCard(redisKeys.answered(pin, qIdx));
   },
 
   async getMetaOrThrow(pin: string) {
@@ -174,41 +182,48 @@ export const gameRepository = {
   },
 
   async getPlayer(pin: string, userId: string) {
-    const player = await redisClient.hGet(redisKeys.players(pin), userId);
+    const player = await redisClient.hGetAll(redisKeys.player(pin, userId));
     if (!player) return null;
-    return JSON.parse(player);
+    return {
+      nickname: player.nickname,
+      oldRank: Number(player.oldRank),
+      currentRank: Number(player.currentRank),
+    };
   },
 
+  // TODO: PIPELINE
   async getPlayers(pin: string) {
-    const players = await redisClient.hGetAll(redisKeys.players(pin));
-    if (Object.keys(players).length === 0) return null;
+    const playersMap: Record<string, Player> = {};
+    const players = await redisClient.sMembers(redisKeys.players(pin));
 
-    const playersFormat: Record<string, Player> = {};
-    for (const [userId, val] of Object.entries(players)) {
-      playersFormat[userId] = JSON.parse(val);
+    const pipeline = redisClient.multi();
+
+    for (const userId of players) {
+      const player = await this.getPlayer(pin, userId);
+      if (player) playersMap[userId] = player;
     }
-
-    return playersFormat;
+    return playersMap;
   },
 
   async updateRanks(pin: string) {
-    // Fetch both in parallel - leaderboard is already sorted by score descending
     const [leaderboard, players] = await Promise.all([
       this.getLeaderboard(pin),
       this.getPlayers(pin),
     ]);
     const playersMap = players || {};
 
-    // Build rank map from sorted leaderboard (index = rank, 0-based)
     const pipeline = redisClient.multi();
+
     leaderboard.forEach((entry, index) => {
       const userId = entry.value;
       const player = playersMap[userId];
       if (!player) return;
-      player.oldRank = player.currentRank;
-      player.currentRank = index;
-      pipeline.hSet(redisKeys.players(pin), userId, JSON.stringify(player));
+      pipeline.hSet(redisKeys.player(pin, userId), {
+        oldRank: player.currentRank,
+        currentRank: index,
+      });
     });
+
     await pipeline.exec();
   },
 
@@ -217,9 +232,9 @@ export const gameRepository = {
       this.getQuestionOrThrow(pin, qIdx),
       this.getAnswers(pin, qIdx),
     ]);
-
     const pipeline = redisClient.multi();
-    for (const [userId, answer] of Object.entries(answers || {})) {
+
+    for (const [userId, answer] of Object.entries(answers)) {
       const timeTakenSec =
         startedAt > 0 ? Math.max(0, (answer.answeredAt - startedAt) / 1000) : 0;
       const score = gameEngine.calculateScore(
@@ -229,9 +244,8 @@ export const gameRepository = {
         timeTakenSec,
         question.timeLimit,
       );
-      if (score > 0) {
+      if (score > 0)
         pipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);
-      }
     }
     await pipeline.exec();
   },
@@ -240,15 +254,18 @@ export const gameRepository = {
     return await redisClient.zRevRank(redisKeys.leaderboard(pin), playerId);
   },
 
-  // async getRankAbove(pin: string, rank: number | null) {
-  //   if (!rank) return;
-  //   return await redisClient.zRange(
-  //     redisKeys.leaderboard(pin),
-  //     rank + 1,
-  //     rank + 1,
-  //     { REV: true },
-  //   );
-  // },
+  async getRankAbove(pin: string, userId: string) {
+    const rank = await this.getRank(pin, userId);
+    if (!rank) return;
+    const rankAbove = await redisClient.zRange(
+      redisKeys.leaderboard(pin),
+      rank + 1,
+      rank + 1,
+      { REV: true },
+    );
+
+    return rankAbove[0] ?? null;
+  },
 
   async getScore(pin: string, userId: string) {
     return await redisClient.zScore(redisKeys.leaderboard(pin), userId);
@@ -278,6 +295,35 @@ export const gameRepository = {
       leaderboard,
       question,
       answers,
+    };
+  },
+
+  async getPersonalState(
+    pin: string,
+    userId: string,
+  ): Promise<GamePersonalState | null> {
+    const meta = await this.getMeta(pin);
+    if (!meta) return null;
+
+    const [player, score, question, answer, rankAbove] = await Promise.all([
+      this.getPlayer(pin, userId),
+      this.getScore(pin, userId),
+      meta.state === "active"
+        ? this.getQuestion(pin, meta.currentQuestion)
+        : Promise.resolve(null),
+      meta.state === "active"
+        ? this.getAnswer(pin, meta.currentQuestion, userId)
+        : Promise.resolve(null),
+      this.getRankAbove(pin, userId),
+    ]);
+
+    return {
+      meta,
+      player,
+      score,
+      question,
+      answer,
+      rankAbove: rankAbove ?? null,
     };
   },
 };

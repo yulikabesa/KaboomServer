@@ -1,4 +1,9 @@
-import { GameFullState, Player, UserAnswer } from "../types/game";
+import {
+  GameFullState,
+  GamePersonalState,
+  Player,
+  UserAnswer,
+} from "../types/game";
 
 export const gameEngine = {
   isAnswerCorrect(correctIndexes: number[], playerAnswer: number[]) {
@@ -71,23 +76,15 @@ export const gameEngine = {
   },
 
   // Build the view for a single player (personal info)
-  buildPersonalPlayerView(gameState: GameFullState, userId: string) {
-    const { meta, question, players, answers, leaderboard } = gameState;
-    const playerAnswer = answers?.[userId];
-    const currentRank = players[userId].currentRank;
-    const score =
-      currentRank !== null ? (leaderboard[currentRank]?.score ?? 0) : 0;
-    const rankAbove =
-      currentRank !== null && currentRank !== 0
-        ? (leaderboard[currentRank - 1]?.nickname ?? null)
-        : null;
+  buildPersonalPlayerView(gameState: GamePersonalState, userId: string) {
+    const { meta, question, player, answer, score, rankAbove } = gameState;
 
     switch (meta.phase) {
       case "answers":
         return {
           phase: meta.phase,
           data: {
-            hasAnswered: playerAnswer !== undefined,
+            hasAnswered: !!answer,
             answerOptions: question?.answerOptions,
             score,
           },
@@ -98,14 +95,14 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            isCorrect:
-              playerAnswer !== undefined
-                ? this.isAnswerCorrect(
-                    question!.correctIndexes,
-                    playerAnswer.indexes,
-                  )
-                : false, // no answer
-            currentRank: currentRank !== null ? currentRank + 1 : null,
+            isCorrect: answer
+              ? this.isAnswerCorrect(
+                  question!.correctIndexes,
+                  answer?.indexes ?? [],
+                )
+              : false, // no answer
+            currentRank:
+              player?.currentRank !== null ? player!.currentRank + 1 : null,
             rankAbove,
             score,
           },
@@ -115,7 +112,8 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            currentRank: currentRank !== null ? currentRank + 1 : null,
+            currentRank:
+              player?.currentRank !== null ? player!.currentRank + 1 : null,
             score,
           },
         };

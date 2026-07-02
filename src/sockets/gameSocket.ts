@@ -3,6 +3,7 @@ import { gameRepository } from "../repositories/gameRepository";
 import { gameService } from "../services/gameService";
 import { gameEngine } from "../engine/gameEngine";
 import { questionTimer } from "../timers/questionTimer";
+import { GameFullState, GamePersonalState } from "../types/game";
 
 // todo: decide -> payload.pin / socket.data.pin
 const hostOnly =
@@ -28,9 +29,13 @@ export const emitGameState = async (io: Server, pin: string) => {
     io.to(`game:${pin}`).emit("game-state", sharedView);
   } else {
     for (const userId of Object.keys(state.players)) {
-      // if (userId === hostId) continue;
+      const personalState = await gameRepository.getPersonalState(pin, userId);
+      if (!personalState) return;
 
-      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      const personalView = gameEngine.buildPersonalPlayerView(
+        personalState,
+        userId,
+      );
       io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
     }
   }
@@ -68,7 +73,10 @@ const handlers = {
     io.to(`user:${hostId}:game:${payload.pin}`).emit("player-joined", player);
 
     // todo: change game state emission and decide if joining game should always be allowed
-    const state = await gameRepository.getFullState(socket.data.pin);
+    const state = await gameRepository.getPersonalState(
+      socket.data.pin,
+      userId,
+    );
     if (state) {
       const personalView = gameEngine.buildPersonalPlayerView(state, userId);
       io.to(`user:${userId}:game:${socket.data.pin}`).emit(
@@ -88,16 +96,22 @@ const handlers = {
 
   "get-game-state": async (payload: any, socket: Socket) => {
     const pin = socket.data.pin;
-    const state = await gameRepository.getFullState(pin);
+    const userId = socket.data.userId;
+    const isHost = userId === (await gameRepository.getHost(pin));
+    const state = isHost
+      ? await gameRepository.getFullState(pin)
+      : await gameRepository.getPersonalState(pin, userId);
     if (!state) return;
 
-    const userId = socket.data.userId;
-    if (userId === state.meta.host) {
-      socket.emit("game-state", gameEngine.buildHostView(state));
+    if (isHost) {
+      socket.emit(
+        "game-state",
+        gameEngine.buildHostView(state as GameFullState),
+      );
     } else {
       socket.emit(
         "game-state",
-        gameEngine.buildPersonalPlayerView(state, userId),
+        gameEngine.buildPersonalPlayerView(state as GamePersonalState, userId),
       );
     }
   },
@@ -142,7 +156,7 @@ const handlers = {
       await gameService.endQuestion(pin);
       await emitGameState(io, pin);
     } else {
-      const state = await gameRepository.getFullState(pin);
+      const state = await gameRepository.getPersonalState(pin, userId);
       if (state) {
         const personalView = gameEngine.buildPersonalPlayerView(state, userId);
         io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
