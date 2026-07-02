@@ -1,5 +1,4 @@
 import { gameRepository } from "../repositories/gameRepository";
-import { gameEngine } from "../engine/gameEngine";
 import { QuizService } from "./quizService";
 
 const generatePin = () =>

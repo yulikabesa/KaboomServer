@@ -1,21 +1,23 @@
 export const redisKeys = {
   // Hash { quizId, host, state, phase, currentQuestion, questionCount }
-  meta: (pin: string) =>
-    `session:${pin}:meta`,
+  meta: (pin: string) => `session:${pin}:meta`,
 
-  // Hash { question, answers, correctIndexes, timeLimit, scoringWeight }
-  question: (pin: string, qIdx: number) =>
-    `session:${pin}:question:${qIdx}`,
+  // Hash { questionText, answerOptions, correctIndexes, timeLimit, scoringWeight }
+  question: (pin: string, qIdx: number) => `session:${pin}:question:${qIdx}`,
 
-  // Hash { userId: JSON -> { nickname, oldRank, currentRank } }
-  players: (pin: string) =>
-    `session:${pin}:players`,
+  // Set of userId (all players)
+  players: (pin: string) => `session:${pin}:players`,
 
-  // Hash { userId: JSON -> { indexes, answeredAt } }
-  answers: (pin: string, qIdx: number) =>
-    `session:${pin}:answers:${qIdx}`,
+  // Hash { nickname, oldRank, currentRank }
+  player: (pin: string, userId: string) => `session:${pin}:player:${userId}`,
+
+  // Set of userId
+  answered: (pin: string, qIdx: number) => `session:${pin}:answers:${qIdx}`,
+
+  // Hash { indexes, answeredAt }
+  answer: (pin: string, qIdx: number, userId: string) =>
+    `session:${pin}:question:${qIdx}:player:${userId}`,
 
   // Sorted Set
-  leaderboard: (pin: string) =>
-    `session:${pin}:leaderboard`,
+  leaderboard: (pin: string) => `session:${pin}:leaderboard`,
 };
