@@ -47,7 +47,6 @@ export const gameEngine = {
 
   mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
     return leaderboard.map((p) => ({
-      // nickname: players[p.value].nickname ?? "",
       nickname: players[p.value].nickname,
       score: p.score,
       rankChange: Math.sign(
@@ -55,6 +54,32 @@ export const gameEngine = {
         players[p.value].oldRank - players[p.value].currentRank,
       ),
     }));
+  },
+
+  // TODO: FIX
+  derivePersonalState(state: GameFullState, userId: string): GamePersonalState {
+    const player = state.players[userId] ?? null;
+    const answer = state.answers?.[userId] ?? null;
+
+    let score: number | null = null;
+    let rankAbove: string | null = null;
+
+    const idx = player?.currentRank;
+    if (!!idx) {
+      score = state.leaderboard[idx].score;
+      if (idx - 1 < state.leaderboard.length) {
+        rankAbove = state.leaderboard[idx - 1].nickname;
+      }
+    }
+
+    return {
+      meta: state.meta,
+      player,
+      score,
+      question: state.question,
+      answer,
+      rankAbove,
+    };
   },
 
   // Build the view that all players in a game can see
@@ -76,7 +101,7 @@ export const gameEngine = {
   },
 
   // Build the view for a single player (personal info)
-  buildPersonalPlayerView(gameState: GamePersonalState, userId: string) {
+  buildPersonalPlayerView(gameState: GamePersonalState) {
     const { meta, question, player, answer, score, rankAbove } = gameState;
 
     switch (meta.phase) {

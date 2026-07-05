@@ -23,26 +23,27 @@ export const emitGameState = async (io: Server, pin: string) => {
   if (!state) return;
 
   const hostId = state.meta.host;
+  const hostRoom = `user:${hostId}:game:${pin}`;
 
   const sharedView = gameEngine.buildSharedPlayerView(state);
   if (sharedView.data) {
-    io.to(`game:${pin}`).emit("game-state", sharedView);
+    // One broadcast for all non-host players.
+    io.to(`game:${pin}`).except(hostRoom).emit("game-state", sharedView);
   } else {
+    // Derive personal views from the full state
     for (const userId of Object.keys(state.players)) {
+      // const personalState = gameEngine.derivePersonalState(state, userId);
+      // const personalView = gameEngine.buildPersonalPlayerView(personalState);
       const personalState = await gameRepository.getPersonalState(pin, userId);
       if (!personalState) return;
 
-      const personalView = gameEngine.buildPersonalPlayerView(
-        personalState,
-        userId,
-      );
+      const personalView = gameEngine.buildPersonalPlayerView(personalState);
       io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
     }
   }
 
-  // Host view
   const hostView = gameEngine.buildHostView(state);
-  io.to(`user:${hostId}:game:${pin}`).emit("game-state", hostView);
+  io.to(hostRoom).emit("game-state", hostView);
 };
 
 const handlers = {
@@ -78,7 +79,7 @@ const handlers = {
       userId,
     );
     if (state) {
-      const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+      const personalView = gameEngine.buildPersonalPlayerView(state);
       io.to(`user:${userId}:game:${socket.data.pin}`).emit(
         "game-state",
         personalView,
@@ -111,7 +112,7 @@ const handlers = {
     } else {
       socket.emit(
         "game-state",
-        gameEngine.buildPersonalPlayerView(state as GamePersonalState, userId),
+        gameEngine.buildPersonalPlayerView(state as GamePersonalState),
       );
     }
   },
@@ -158,7 +159,7 @@ const handlers = {
     } else {
       const state = await gameRepository.getPersonalState(pin, userId);
       if (state) {
-        const personalView = gameEngine.buildPersonalPlayerView(state, userId);
+        const personalView = gameEngine.buildPersonalPlayerView(state);
         io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
       }
     }

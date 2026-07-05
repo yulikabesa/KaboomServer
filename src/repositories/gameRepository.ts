@@ -143,13 +143,11 @@ export const gameRepository = {
     const ids = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
 
     const values = await Promise.all(
-      ids.map((id) => redisClient.hGetAll(redisKeys.answer(pin, qIdx, id))),
+      ids.map((id) => this.getAnswer(pin, qIdx, id)),
     );
 
     return Object.fromEntries(
-      values
-        .map((answer, i) => [ids[i], answer])
-        .filter(([, answer]) => Object.keys(answer).length > 0),
+      values.map((answer, i) => [ids[i], answer]),
     ) as Record<string, UserAnswer>;
   },
 
@@ -169,6 +167,10 @@ export const gameRepository = {
 
   async getAnswerCount(pin: string, qIdx: number) {
     return await redisClient.sCard(redisKeys.answered(pin, qIdx));
+  },
+
+  async getPlayerCount(pin: string) {
+    return await redisClient.sCard(redisKeys.players(pin));
   },
 
   async getMetaOrThrow(pin: string) {
@@ -195,15 +197,12 @@ export const gameRepository = {
 
   async getPlayers(pin: string) {
     const ids = await redisClient.sMembers(redisKeys.players(pin));
-
-    const values = await Promise.all(
-      ids.map((id) => redisClient.hGetAll(redisKeys.player(pin, id))),
-    );
+    const values = await Promise.all(ids.map((id) => this.getPlayer(pin, id)));
 
     return Object.fromEntries(
       values
         .map((player, i) => [ids[i], player])
-        .filter(([, player]) => Object.keys(player).length > 0),
+        .filter(([, player]) => !!player),
     ) as Record<string, Player>;
   },
 
@@ -256,17 +255,20 @@ export const gameRepository = {
     return await redisClient.zRevRank(redisKeys.leaderboard(pin), playerId);
   },
 
+  // TODO: FIX
   async getRankAbove(pin: string, userId: string) {
     const rank = await this.getRank(pin, userId);
-    if (!rank) return;
+    if (!rank) return null;
+
     const rankAbove = await redisClient.zRange(
       redisKeys.leaderboard(pin),
-      rank + 1,
-      rank + 1,
+      rank - 1,
+      rank - 1,
       { REV: true },
     );
 
-    return rankAbove[0] ?? null;
+    const player = await this.getPlayer(pin, rankAbove[0]);
+    return player?.nickname;
   },
 
   async getScore(pin: string, userId: string) {

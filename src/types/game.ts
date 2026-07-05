@@ -20,6 +20,17 @@ export interface Player {
   currentRank: number;
 }
 
+export interface LeaderboardEntry {
+  nickname: string;
+  score: number;
+  rankChange: number;
+}
+
+export interface RawLeaderboardEntry {
+  value: string; // userId
+  score: number;
+}
+
 export interface GameMeta {
   quizId: string;
   host: string;
@@ -42,7 +53,7 @@ export interface GameQuestion {
 export interface GameFullState {
   meta: GameMeta;
   players: Record<string, Player>;
-  leaderboard: { nickname: string; score: number }[];
+  leaderboard: LeaderboardEntry[];
   question: GameQuestion | null;
   answers: Record<string, UserAnswer> | null;
 }

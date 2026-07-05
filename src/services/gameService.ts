@@ -98,9 +98,10 @@ export const gameService = {
     const meta = await gameRepository.getMetaOrThrow(pin);
     const qIdx = meta.currentQuestion;
 
-    const answered = await gameRepository.getAnswerCount(pin, qIdx);
-    const players = (await gameRepository.getPlayers(pin)) || {};
-    const totalPlayers = Object.keys(players).length;
+    const [answered, totalPlayers] = await Promise.all([
+      gameRepository.getAnswerCount(pin, qIdx),
+      gameRepository.getPlayerCount(pin),
+    ]);
 
     return { answered, totalPlayers };
   },
