@@ -139,16 +139,18 @@ export const gameRepository = {
     ]);
   },
 
-  // TODO: PIPELINE
   async getAnswers(pin: string, qIdx: number) {
-    const answers: Record<string, UserAnswer> = {};
-    const answered = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
+    const ids = await redisClient.sMembers(redisKeys.answered(pin, qIdx));
 
-    for (const userId of answered) {
-      const answer = await this.getAnswer(pin, qIdx, userId);
-      if (answer) answers[userId] = answer;
-    }
-    return answers;
+    const values = await Promise.all(
+      ids.map((id) => redisClient.hGetAll(redisKeys.answer(pin, qIdx, id))),
+    );
+
+    return Object.fromEntries(
+      values
+        .map((answer, i) => [ids[i], answer])
+        .filter(([, answer]) => Object.keys(answer).length > 0),
+    ) as Record<string, UserAnswer>;
   },
 
   async getAnswer(pin: string, qIdx: number, userId: string) {
@@ -191,18 +193,18 @@ export const gameRepository = {
     };
   },
 
-  // TODO: PIPELINE
   async getPlayers(pin: string) {
-    const playersMap: Record<string, Player> = {};
-    const players = await redisClient.sMembers(redisKeys.players(pin));
+    const ids = await redisClient.sMembers(redisKeys.players(pin));
 
-    const pipeline = redisClient.multi();
+    const values = await Promise.all(
+      ids.map((id) => redisClient.hGetAll(redisKeys.player(pin, id))),
+    );
 
-    for (const userId of players) {
-      const player = await this.getPlayer(pin, userId);
-      if (player) playersMap[userId] = player;
-    }
-    return playersMap;
+    return Object.fromEntries(
+      values
+        .map((player, i) => [ids[i], player])
+        .filter(([, player]) => Object.keys(player).length > 0),
+    ) as Record<string, Player>;
   },
 
   async updateRanks(pin: string) {
@@ -210,7 +212,7 @@ export const gameRepository = {
       this.getLeaderboard(pin),
       this.getPlayers(pin),
     ]);
-    const playersMap = players || {};
+    const playersMap = players;
 
     const pipeline = redisClient.multi();
 
