@@ -16,11 +16,12 @@ export interface UserAnswer {
 
 export interface Player {
   nickname: string;
-  oldRank: number;
-  currentRank: number;
+  rank: number
+  rankChange: number;
 }
 
 export interface LeaderboardEntry {
+  id: string;
   nickname: string;
   score: number;
   rankChange: number;

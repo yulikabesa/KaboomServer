@@ -35,10 +35,7 @@ export const gameService = {
     // if (playerCount >= MAX_PLAYERS) {
     //   throw new Error("Game is full");
     // }
-
     await gameRepository.addPlayer(pin, userId, nickname);
-    await gameRepository.initLeaderboard(pin, userId);
-
     return { id: userId, nickname };
   },
 
@@ -81,6 +78,13 @@ export const gameService = {
 
     await gameRepository.updateScores(pin, qIdx, meta.questionStartedAt ?? 0);
     await gameRepository.updateRanks(pin);
+    
+    // await gameRepository.updateRanksAndScores(
+    //   pin,
+    //   qIdx,
+    //   meta.questionStartedAt ?? 0,
+    // );
+
     await gameRepository.setMeta(pin, { phase: "results" });
   },
 

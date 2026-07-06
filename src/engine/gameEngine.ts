@@ -46,17 +46,15 @@ export const gameEngine = {
   },
 
   mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
-    return leaderboard.map((p) => ({
-      nickname: players[p.value].nickname,
-      score: p.score,
-      rankChange: Math.sign(
-        // 1 is UP, -1 is DOWN, 0 is UNCHANGED
-        players[p.value].oldRank - players[p.value].currentRank,
-      ),
-    }));
+    return leaderboard
+      .map((p) => ({
+        id: p.value,
+        nickname: players[p.value].nickname,
+        score: p.score,
+        rankChange: players[p.value].rankChange,
+      }));
   },
 
-  // TODO: FIX
   derivePersonalState(state: GameFullState, userId: string): GamePersonalState {
     const player = state.players[userId] ?? null;
     const answer = state.answers?.[userId] ?? null;
@@ -64,10 +62,10 @@ export const gameEngine = {
     let score: number | null = null;
     let rankAbove: string | null = null;
 
-    const idx = player?.currentRank;
-    if (!!idx) {
+    const idx = player?.rank;
+    if (idx >= 0) {
       score = state.leaderboard[idx].score;
-      if (idx - 1 < state.leaderboard.length) {
+      if (idx > 0) {
         rankAbove = state.leaderboard[idx - 1].nickname;
       }
     }
@@ -126,8 +124,7 @@ export const gameEngine = {
                   answer?.indexes ?? [],
                 )
               : false, // no answer
-            currentRank:
-              player?.currentRank !== null ? player!.currentRank + 1 : null,
+            currentRank: player?.rank !== null ? player!.rank + 1 : null,
             rankAbove,
             score,
           },
@@ -137,8 +134,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            currentRank:
-              player?.currentRank !== null ? player!.currentRank + 1 : null,
+            currentRank: player?.rank !== null ? player!.rank + 1 : null,
             score,
           },
         };
