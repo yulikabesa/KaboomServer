@@ -149,18 +149,16 @@ const handlers = {
       progress.answered,
     );
 
+    io.to(`user:${userId}:game:${pin}`).emit("game-state", {
+      phase: "answers",
+      data: { hasAnswered: true },
+    });
+
     if (progress.answered === progress.totalPlayers) {
       questionTimer.clear(pin);
       await gameService.endQuestion(pin);
       await emitGameState(io, pin);
       return;
-    }
-
-    const state = await gameRepository.getFullState(pin);
-    if (state) {
-      const personalState = gameEngine.derivePersonalState(state, userId);
-      const personalView = gameEngine.buildPersonalPlayerView(personalState);
-      io.to(`user:${userId}:game:${pin}`).emit("game-state", personalView);
     }
   },
 
