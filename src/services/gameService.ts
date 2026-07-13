@@ -35,8 +35,7 @@ export const gameService = {
     // if (playerCount >= MAX_PLAYERS) {
     //   throw new Error("Game is full");
     // }
-    await gameRepository.addPlayer(pin, userId, nickname);
-    return { id: userId, nickname };
+    return await gameRepository.addPlayer(pin, userId, nickname);
   },
 
   async startGame(pin: string) {
@@ -138,9 +137,9 @@ export const gameService = {
   async validatePin(pin: string) {
     const meta = await gameRepository.getMeta(pin);
     if (!meta) {
-      return { success: false, error: "Invalid pin" };
+      return { success: false, error: "קוד המשחק אינו תקין" };
     } else if (meta.state === "ended") {
-      return { success: false, error: "Game has ended" };
+      return { success: false, error: "המשחק הסתיים" };
     } else {
       return { success: true, error: null };
     }

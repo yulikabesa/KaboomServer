@@ -56,25 +56,27 @@ const handlers = {
 
   "join-game": async (payload: any, socket: Socket, io: Server) => {
     const userId = socket.data.userId;
-    const player = await gameService.addPlayer(
+    const { player, error } = await gameService.addPlayer(
       payload.pin,
       userId,
       payload.nickname,
     );
 
+    if (error) {
+      socket.emit("nickname-error", error);
+      return;
+    }
+
     socket.join(`game:${payload.pin}`);
     socket.join(`user:${userId}:game:${payload.pin}`);
     socket.data.pin = payload.pin;
 
-    const [hostId, state] = await Promise.all([
-      gameRepository.getHost(payload.pin),
-      gameRepository.getFullState(payload.pin),
-    ]);
-
-    io.to(`user:${hostId}:game:${payload.pin}`).emit("player-joined", player);
+    const state = await gameRepository.getFullState(payload.pin);
+    const hostId = state?.meta.host;
 
     // TODO: decide if joining game should always be allowed
     if (state) {
+      io.to(`user:${hostId}:game:${payload.pin}`).emit("player-joined", player);
       const personalState = gameEngine.derivePersonalState(state, userId);
       const personalView = gameEngine.buildPersonalPlayerView(personalState);
 

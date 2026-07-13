@@ -76,7 +76,23 @@ export const gameRepository = {
     return await redisClient.hGet(redisKeys.meta(pin), "host");
   },
 
+  async isNicknameTaken(pin: string, nickname: string, userId: string) {
+    const pipeline = redisClient.multi();
+    const players = await redisClient.sMembers(redisKeys.players(pin));
+    for (const playerId of players) {
+      // to allow a player to reconnect with the same nickname
+      if (playerId === userId) continue;
+      pipeline.hGet(redisKeys.player(pin, playerId), "nickname");
+    }
+    const nicknames = (await pipeline.exec()) as unknown as Array<string>;
+    return nicknames.includes(nickname);
+  },
+
   async addPlayer(pin: string, userId: string, nickname: string) {
+    const nicknameTaken = await this.isNicknameTaken(pin, nickname, userId);
+    if (nicknameTaken)
+      return { success: false, error: "השם שבחרת תפוס" };
+
     await redisClient
       .multi()
       .sAdd(redisKeys.players(pin), userId)
@@ -90,6 +106,7 @@ export const gameRepository = {
       .zAdd(redisKeys.leaderboard(pin), [{ score: 0, value: userId }])
       .expire(redisKeys.leaderboard(pin), EXPIRE)
       .exec();
+    return { success: true, player: { id: userId, nickname } };
   },
 
   async getLeaderboard(pin: string) {
