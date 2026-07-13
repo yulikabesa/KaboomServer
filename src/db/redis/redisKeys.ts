@@ -8,7 +8,8 @@ export const redisKeys = {
   // Set of userId (all players)
   players: (pin: string) => `session:${pin}:players`,
 
-  // Hash { nickname, oldRank, currentRank }
+  //TODO: add name and streak
+  // Hash { nickname, rank, rankChange }
   player: (pin: string, userId: string) => `session:${pin}:player:${userId}`,
 
   // Set of userId

@@ -37,22 +37,24 @@ export const gameEngine = {
     const counts = new Array(answerCount).fill(0);
 
     for (const answer of Object.values(answers)) {
-      for (const index of answer.indexes) {
-        counts[index]++;
-      }
+      const index = answer.indexes?.[0] ?? null;
+      if (index !== null) counts[index]++;
+
+      // for (const index of answer.indexes) {
+      //   counts[index]++;
+      // }
     }
 
     return counts;
   },
 
   mapLeaderboard(leaderboard: any[], players: Record<string, Player>) {
-    return leaderboard
-      .map((p) => ({
-        id: p.value,
-        nickname: players[p.value].nickname,
-        score: p.score,
-        rankChange: players[p.value].rankChange,
-      }));
+    return leaderboard.map((p) => ({
+      id: p.value,
+      nickname: players[p.value].nickname,
+      score: p.score,
+      rankChange: players[p.value].rankChange,
+    }));
   },
 
   derivePersonalState(state: GameFullState, userId: string): GamePersonalState {
@@ -107,7 +109,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            hasAnswered: !!answer,
+            hasAnswered: !!answer?.indexes,
             answerOptions: question?.answerOptions,
             score,
           },
@@ -118,12 +120,7 @@ export const gameEngine = {
         return {
           phase: meta.phase,
           data: {
-            isCorrect: answer
-              ? this.isAnswerCorrect(
-                  question!.correctIndexes,
-                  answer?.indexes ?? [],
-                )
-              : false, // no answer
+            isCorrect: answer?.correct,
             currentRank: player?.rank !== null ? player!.rank + 1 : null,
             rankAbove,
             score,

@@ -73,18 +73,11 @@ export const gameService = {
     const meta = await gameRepository.getMetaOrThrow(pin);
     if (meta.phase !== "answers") return;
 
-    const qIdx = meta.currentQuestion;
-
-    await gameRepository.updateScores(pin, qIdx, meta.questionStartedAt ?? 0);
-    await gameRepository.updateRanks(pin);
-    
-    // await gameRepository.updateRanksAndScores(
-    //   pin,
-    //   qIdx,
-    //   meta.questionStartedAt ?? 0,
-    // );
-
-    await gameRepository.setMeta(pin, { phase: "results" });
+    await gameRepository.finalizeQuestion(
+      pin,
+      meta.currentQuestion,
+      meta.questionStartedAt ?? 0,
+    );
   },
 
   async nextQuestion(pin: string) {

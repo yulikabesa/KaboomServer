@@ -170,24 +170,30 @@ export const gameRepository = {
       const row = rows[i];
       if (!row || Object.keys(row).length === 0) continue;
       out[ids[i]] = {
-        answeredAt: Number(row.answeredAt),
-        indexes: row.indexes?.split("-").map(Number),
+        answeredAt: row.answeredAt ? Number(row.answeredAt) : null,
+        indexes: row.indexes?.split("-").map(Number) ?? null,
+        correct: row.correct ? row.correct === "true" : null,
       };
     }
     return out;
   },
 
-  async getAnswer(pin: string, qIdx: number, userId: string) {
+  async getAnswer(
+    pin: string,
+    qIdx: number,
+    userId: string,
+  ): Promise<UserAnswer | null> {
     const answer = await redisClient.hGetAll(
       redisKeys.answer(pin, qIdx, userId),
     );
 
     if (Object.keys(answer).length === 0) return null;
 
-    const indexesArray = answer.indexes?.split("-").map(Number);
+    const indexesArray = answer.indexes?.split("-").map(Number) ?? null;
     return {
-      answeredAt: Number(answer.answeredAt),
+      answeredAt: answer.answeredAt ? Number(answer.answeredAt) : null,
       indexes: indexesArray,
+      correct: answer.correct ? answer.correct === "true" : null,
     };
   },
 
@@ -211,7 +217,7 @@ export const gameRepository = {
     return question;
   },
 
-  async getPlayer(pin: string, userId: string) {
+  async getPlayer(pin: string, userId: string): Promise<Player | null> {
     const player = await redisClient.hGetAll(redisKeys.player(pin, userId));
     if (!player) return null;
     return {
@@ -244,91 +250,70 @@ export const gameRepository = {
     return out;
   },
 
-  async updateRanks(pin: string) {
-    const [leaderboard, players] = await Promise.all([
-      this.getLeaderboard(pin),
+  async finalizeQuestion(pin: string, qIdx: number, startedAt: number) {
+    const [question, answers, players] = await Promise.all([
+      this.getQuestionOrThrow(pin, qIdx),
+      this.getAnswers(pin, qIdx),
       this.getPlayers(pin),
     ]);
 
-    const pipeline = redisClient.multi();
-    leaderboard.forEach((entry, index) => {
-      const userId = entry.value;
-      const player = players[userId];
-      if (!player) return;
-      const prevRank = player.rank;
-      pipeline.hSet(redisKeys.player(pin, userId), {
-        rankChange: prevRank < 0 ? 0 : Math.sign(prevRank - index),
-        rank: index,
-      });
-    });
-
-    await pipeline.exec();
-  },
-
-  async updateScores(pin: string, qIdx: number, startedAt: number) {
-    const [question, answers] = await Promise.all([
-      this.getQuestionOrThrow(pin, qIdx),
-      this.getAnswers(pin, qIdx),
-    ]);
-
-    const pipeline = redisClient.multi();
-
+    // Calculate scores
+    const scoresPipeline = redisClient.multi();
     for (const [userId, answer] of Object.entries(answers)) {
       const timeTakenSec =
-        startedAt > 0 ? Math.max(0, (answer.answeredAt - startedAt) / 1000) : 0;
+        startedAt > 0
+          ? Math.max(0, (answer.answeredAt! - startedAt) / 1000)
+          : 0;
       const score = gameEngine.calculateScore(
         question.correctIndexes,
-        answer.indexes,
+        answer.indexes!,
         question.scoringWeight,
         timeTakenSec,
         question.timeLimit,
       );
-      if (score > 0)
-        pipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);
+      let correct = "false";
+      if (score > 0) {
+        correct = "true";
+        scoresPipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);
+        scoresPipeline.hSet(
+          redisKeys.answer(pin, qIdx, userId),
+          "correct",
+          correct,
+        );
+      }
     }
+
+    await scoresPipeline.exec();
+
+    const leaderboard = await this.getLeaderboard(pin);
+    const pipeline = redisClient.multi();
+
+    const unanswered = (await redisClient.sDiff([
+      redisKeys.players(pin),
+      redisKeys.answered(pin, qIdx),
+    ])) as string[];
+
+    for (const playerId of unanswered) {
+      pipeline.hSet(redisKeys.answer(pin, qIdx, playerId), {
+        answer: "",
+        answeredAt: "",
+        correct: "false",
+      });
+    }
+
+    leaderboard.forEach(({ value: userId }, newRank) => {
+      const player = players[userId];
+      if (!player) return;
+      const prevRank = player.rank;
+      pipeline.hSet(redisKeys.player(pin, userId), {
+        rank: newRank,
+        rankChange: prevRank < 0 ? 0 : Math.sign(prevRank - newRank),
+      });
+    });
+
+    pipeline.hSet(redisKeys.meta(pin), { phase: "results" });
     await pipeline.exec();
   },
-
-  // async updateRanksAndScores(pin: string, qIdx: number, startedAt: number) {
-  //   const [players, question, answers] = await Promise.all([
-  //     this.getPlayers(pin),
-  //     this.getQuestionOrThrow(pin, qIdx),
-  //     this.getAnswers(pin, qIdx),
-  //   ]);
-
-  //   const scoresPipeline = redisClient.multi();
-
-  //   for (const [userId, answer] of Object.entries(answers)) {
-  //     const timeTakenSec =
-  //       startedAt > 0 ? Math.max(0, (answer.answeredAt - startedAt) / 1000) : 0;
-  //     const score = gameEngine.calculateScore(
-  //       question.correctIndexes,
-  //       answer.indexes,
-  //       question.scoringWeight,
-  //       timeTakenSec,
-  //       question.timeLimit,
-  //     );
-  //     if (score > 0)
-  //       scoresPipeline.zIncrBy(redisKeys.leaderboard(pin), score, userId);
-  //   }
-  //   await scoresPipeline.exec();
-
-  //   const leaderboard = await this.getLeaderboard(pin);
-
-  //   const ranksPipeline = redisClient.multi();
-  //   leaderboard.forEach((entry, index) => {
-  //     const userId = entry.value;
-  //     const player = players[userId];
-  //     if (!player) return;
-  //     const prevRank = player.rank;
-  //     ranksPipeline.hSet(redisKeys.player(pin, userId), {
-  //       rankChange: prevRank < 0 ? 0 : Math.sign(prevRank - index),
-  //       rank: index,
-  //     });
-  //   });
-
-  //   await ranksPipeline.exec();
-  // },
 
   async getRank(pin: string, playerId: string) {
     return await redisClient.zRevRank(redisKeys.leaderboard(pin), playerId);
@@ -349,6 +334,7 @@ export const gameRepository = {
     //   results     -> players, question, leaderboard, answers (host distribution + personal isCorrect)
     //   leaderboard -> players, question, leaderboard, answers (personal isCorrect)
     //   podium      -> players, leaderboard
+
     const needsQuestion =
       meta.phase === "question" ||
       meta.phase === "answers" ||

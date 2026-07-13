@@ -10,13 +10,14 @@ export type GamePhase =
 
 //TODO: CHANGE INDEXES TYPE
 export interface UserAnswer {
-  indexes: number[];
-  answeredAt: number; // Unix timestamp in ms
+  indexes: number[] | null;
+  answeredAt: number | null; // Unix timestamp in ms
+  correct: boolean | null;
 }
 
 export interface Player {
   nickname: string;
-  rank: number
+  rank: number;
   rankChange: number;
 }
 
