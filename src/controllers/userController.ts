@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import User from "../models/user.ts";
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -116,7 +117,7 @@ export class UserController {
     }
   }
 
-  static async searchUsers(req: Request, res: Response): Promise<void> {
+  static async searchUsers(req: IUserRequest, res: Response): Promise<void> {
     try {
       const searchTerm = req.query.q;
 
@@ -128,8 +129,21 @@ export class UserController {
         return;
       }
 
+      // ids the client already shows are excluded
+      // those ids are sent as a coma separated exclude coma
+      const excludeParam = req.query.exclude;
+      const excludedIds = (
+        Array.isArray(excludeParam) ? excludeParam : [excludeParam]
+      )
+        .filter((id): id is string => typeof id === "string")
+        .flatMap((id) => id.split(","))
+        .concat(req.user!._id.toString())
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+
       // Search matching names or emails case-insensitively
       const users = await User.find({
+        _id: { $nin: excludedIds },
         $or: [
           { name: { $regex: searchTerm, $options: "i" } },
           { email: { $regex: searchTerm, $options: "i" } },
